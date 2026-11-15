@@ -127,3 +127,36 @@ func TestExternalIMAPShareIsolatedReadAndRevoke(t *testing.T) {
 		t.Fatalf("revoked share status = %d", got)
 	}
 }
+
+func TestExternalIMAPSharePagesRespectCSP(t *testing.T) {
+	a := newTestApp(t)
+	router := a.Router()
+	get := func(path string) *httptest.ResponseRecorder {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		return rec
+	}
+	page := get("/api/public/shared-inbox")
+	if page.Code != http.StatusOK {
+		t.Fatalf("viewer page status: %d", page.Code)
+	}
+	if strings.Contains(page.Body.String(), "<script>") ||
+		!strings.Contains(page.Body.String(), "<script defer src=\"/api/public/shared-inbox/app.js\"></script>") {
+		t.Fatal("viewer must use an external same-origin JS file, never inline scripts")
+	}
+	if !strings.Contains(page.Header().Get("Content-Security-Policy"), "script-src 'self'") {
+		t.Fatal("CSP must permit same-origin scripts without unsafe-inline")
+	}
+	js := get("/api/public/shared-inbox/app.js")
+	if js.Code != http.StatusOK || !strings.HasPrefix(js.Header().Get("Content-Type"), "application/javascript") {
+		t.Fatalf("viewer JS route failed: code=%d, type=%s", js.Code, js.Header().Get("Content-Type"))
+	}
+	if strings.Contains(js.Body.String(), "<script>") || !strings.Contains(js.Body.String(), "async function refresh()") {
+		t.Fatal("viewer JS payload missing or incorrectly wrapped")
+	}
+	admin := get("/api/me/external-imap-share-panel/app.js")
+	if admin.Code != http.StatusUnauthorized {
+		t.Fatalf("admin script exposed without authentication: %d", admin.Code)
+	}
+}
