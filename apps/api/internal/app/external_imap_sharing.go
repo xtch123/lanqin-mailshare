@@ -343,7 +343,34 @@ func (a *App) handleExternalIMAPShareMessage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	item.BodyHTML = bluemonday.UGCPolicy().Sanitize(item.BodyHTML)
-	respondJSON(w, http.StatusOK, item)
+	// Attachment listing is reached only after the account-scoped message check.
+	attachments := []map[string]any{}
+	rows, err := a.db.QueryContext(r.Context(), `SELECT id,filename,size_bytes FROM attachments WHERE message_id=? ORDER BY created_at,id`, item.ID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to read attachments")
+		return
+	}
+	for rows.Next() {
+		var id, name string
+		var size int64
+		if err := rows.Scan(&id, &name, &size); err != nil {
+			rows.Close()
+			respondError(w, http.StatusInternalServerError, "failed to read attachments")
+			return
+		}
+		attachments = append(attachments, map[string]any{"id": id, "filename": name, "sizeBytes": size})
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		respondError(w, http.StatusInternalServerError, "failed to read attachments")
+		return
+	}
+	rows.Close()
+	respondJSON(w, http.StatusOK, map[string]any{
+		"id": item.ID, "subject": item.Subject, "from": item.From, "fromName": item.FromName,
+		"receivedAt": item.ReceivedAt, "snippet": item.Snippet,
+		"bodyText": item.BodyText, "bodyHtml": item.BodyHTML, "attachments": attachments,
+	})
 }
 
 func (a *App) handleExternalIMAPShareAttachment(w http.ResponseWriter, r *http.Request) {
