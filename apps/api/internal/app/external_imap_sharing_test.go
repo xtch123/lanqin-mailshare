@@ -128,14 +128,20 @@ func TestExternalIMAPShareIsolatedReadAndRevoke(t *testing.T) {
 	}
 	past := now.Add(-time.Minute).Format(time.RFC3339Nano)
 	_, err = a.db.ExecContext(ctx, "UPDATE external_imap_share_links SET revoked_at=NULL,expires_at=? WHERE id=?", past, "shared-link")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got := get("/api/public/shared-inbox/messages").Code; got != http.StatusUnauthorized {
 		t.Fatalf("expired share status = %d", got)
 	}
 	_, err = a.db.ExecContext(ctx, "UPDATE external_imap_share_links SET expires_at=NULL WHERE id=?", "shared-link")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	_, err = a.db.ExecContext(ctx, "UPDATE external_imap_accounts SET enabled=0 WHERE id=?", "ext-one")
-	if err != nil { t.Fatal(err) }
+	if err != nil {
+		t.Fatal(err)
+	}
 	if got := get("/api/public/shared-inbox/messages").Code; got != http.StatusUnauthorized {
 		t.Fatalf("disabled external IMAP account status = %d", got)
 	}
