@@ -12,6 +12,7 @@ import (
 	"mime"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -299,18 +300,29 @@ type externalShareMessage struct {
 
 func (a *App) handleExternalIMAPShareMessages(w http.ResponseWriter, r *http.Request) {
 	access := shareAccessFromRequest(r)
+	page := 0
+	if raw := strings.TrimSpace(r.URL.Query().Get("page")); raw != "" {
+		var err error
+		page, err = strconv.Atoi(raw)
+		if err != nil || page < 0 || page > 10000 {
+			badRequest(w, errors.New("invalid page"))
+			return
+		}
+	}
 	rows, err := a.db.QueryContext(r.Context(), `SELECT m.id,m.subject,m.from_addr,COALESCE(m.from_name,''),
 		m.received_at,COALESCE(m.snippet,'')
 		FROM external_imap_messages em JOIN messages m ON m.id=em.local_message_id
 		WHERE em.account_id=? AND m.mailbox_id=?
-		ORDER BY m.received_at DESC,m.id DESC LIMIT 300`, access.AccountID, access.MailboxID)
+		ORDER BY m.received_at DESC,m.id DESC LIMIT 100 OFFSET ?`, access.AccountID, access.MailboxID, page*100)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to list messages")
 		return
 	}
 	defer rows.Close()
 	items := []externalShareMessage{}
+	fetched := 0
 	for rows.Next() {
+		fetched++
 		var item externalShareMessage
 		if err := rows.Scan(&item.ID, &item.Subject, &item.From, &item.FromName, &item.ReceivedAt, &item.Snippet); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to list messages")
@@ -324,7 +336,11 @@ func (a *App) handleExternalIMAPShareMessages(w http.ResponseWriter, r *http.Req
 		respondError(w, http.StatusInternalServerError, "failed to list messages")
 		return
 	}
-	respondJSON(w, http.StatusOK, map[string]any{"accountName": access.AccountName, "items": items})
+	nextPage := any(nil)
+	if fetched == 100 && page < 10000 {
+		nextPage = page + 1
+	}
+	respondJSON(w, http.StatusOK, map[string]any{"accountName": access.AccountName, "items": items, "nextPage": nextPage})
 }
 
 func (a *App) handleExternalIMAPShareMessage(w http.ResponseWriter, r *http.Request) {
