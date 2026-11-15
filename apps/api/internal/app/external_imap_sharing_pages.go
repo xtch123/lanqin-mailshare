@@ -49,6 +49,8 @@ small{color:#6d7a89;display:block;margin-top:5px;word-break:break-all}.link{bord
 <div class="grid"><div><label for="label">车友备注（选填）</label><input id="label" maxlength="64" placeholder="例如：一号车 · 成员 A"></div>
 <div><label for="days">共享链接有效期</label><select id="days"><option value="7">7 天</option><option value="1">1 天</option><option value="30">30 天</option><option value="0">永久有效，直到手动撤销</option></select></div></div>
 <label for="visible">可查看多久以前的邮件</label><select id="visible"><option value="1440">最近 24 小时</option><option value="60">最近 1 小时</option><option value="10080">最近 7 天</option><option value="0">全部已同步邮件</option></select>
+<div class="grid"><div><label for="customDays">自定义链接有效期（天，可选）</label><input id="customDays" type="number" min="1" max="3650" step="1" placeholder="留空使用上方预设"></div>
+<div><label for="customVisible">自定义可见范围（分钟，可选）</label><input id="customVisible" type="number" min="0" max="525600" step="1" placeholder="留空使用上方预设；0 为全部"></div></div>
 <div class="actions"><button id="create">生成专属链接</button><button id="refresh" class="secondary">刷新共享记录</button></div>
 <p id="message"></p><div id="newLink"><b>请立即复制保存，下次不会再显示完整链接：</b><div id="linkText" class="link"></div><div class="actions"><button id="copy">复制链接</button><a id="preview" href="#" target="_blank" rel="noopener noreferrer">预览共享页面</a></div></div>
 </section><section><h2>已有共享</h2><div id="shares">读取中……</div></section>
@@ -86,8 +88,12 @@ async function loadShares(){
 $("create").onclick=async()=>{
  $("message").textContent="";$("newLink").style.display="none";
  const accountId=$("account").value;if(!accountId){$("message").textContent="请先添加一个外部邮箱";return}
- const days=Number($("days").value);
- const payload={accountId,label:$("label").value,visibilityMinutes:Number($("visible").value)};
+ const days=$("customDays").value.trim()===""?Number($("days").value):Number($("customDays").value);
+ const visible=$("customVisible").value.trim()===""?Number($("visible").value):Number($("customVisible").value);
+ if(!Number.isInteger(days)||days<0||days>3650||!Number.isInteger(visible)||visible<0||visible>525600){
+  $("message").textContent="自定义参数超出允许范围";return
+ }
+ const payload={accountId,label:$("label").value,visibilityMinutes:visible};
  if(days)payload.expiresAt=new Date(Date.now()+days*86400000).toISOString();
  $("create").disabled=true;
  try{const v=await api("/me/external-imap-shares",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
