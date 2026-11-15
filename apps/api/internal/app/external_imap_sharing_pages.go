@@ -173,19 +173,28 @@ async function openMail(id){
   }
  }catch(e){clear(detail);detail.append(make("p",e.message))}
 }
+let currentPage=0;
+async function loadPage(page,append){
+ const data=await get("/messages?page="+page);
+ subtitle.textContent=(data.accountName||"外部邮箱")+" · 已加载邮件";
+ if(!append){clear(list);err.textContent=""}
+ if(!append&&!(data.items||[]).length){list.append(make("p","当前可见范围内没有邮件"))}
+ (data.items||[]).forEach((m,i)=>{
+  const b=make("button");b.className="mail";b.append(make("b",m.subject),make("small",(m.fromName||m.from)+" · "+new Date(m.receivedAt).toLocaleString()),make("small",m.snippet));
+  b.onclick=()=>{list.querySelectorAll(".mail").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");openMail(m.id)};
+  list.append(b);
+  if(page===0&&i===0&&detail.querySelector("h2")?.textContent==="选择一封邮件"){b.click()}
+ });
+ if(data.nextPage!==null&&data.nextPage!==undefined){
+  const more=make("button","加载更多");more.className="mail";
+  more.onclick=async()=>{more.remove();try{await loadPage(data.nextPage,true)}catch(e){err.textContent=e.message}};
+  list.append(more)
+ }
+ currentPage=page;
+}
 async function refresh(){
  if(!token){subtitle.textContent="共享链接缺少访问令牌";err.textContent="请使用管理员提供的完整链接";return}
- try{
-  const data=await get("/messages");subtitle.textContent=(data.accountName||"外部邮箱")+" · 最近 "+data.items.length+" 封邮件";
-  clear(list);err.textContent="";
-  if(!data.items.length){list.append(make("p","当前可见范围内没有邮件"));return}
-  data.items.forEach((m,i)=>{
-   const b=make("button");b.className="mail";b.append(make("b",m.subject),make("small",(m.fromName||m.from)+" · "+new Date(m.receivedAt).toLocaleString()),make("small",m.snippet));
-   b.onclick=()=>{list.querySelectorAll(".mail").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");openMail(m.id)};
-   list.append(b);
-   if(i===0&&detail.querySelector("h2")?.textContent==="选择一封邮件"){b.click()}
-  })
- }catch(e){err.textContent=e.message;subtitle.textContent="无法读取共享邮箱"}
+ try{await loadPage(0,false)}catch(e){err.textContent=e.message;subtitle.textContent="无法读取共享邮箱"}
 }
 document.getElementById("refresh").onclick=refresh;
 refresh();setInterval(refresh,30000);
