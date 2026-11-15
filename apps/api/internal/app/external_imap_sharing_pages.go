@@ -1,8 +1,6 @@
 package app
 
-import (
-	"net/http"
-)
+import "net/http"
 
 // First-cut pages are self-contained so they can be tested without changing
 // upstream React navigation. They do NOT expose the admin session to viewers.
