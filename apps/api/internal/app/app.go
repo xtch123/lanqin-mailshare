@@ -110,6 +110,10 @@ func New(cfg Config, logger *slog.Logger) (*App, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := a.migrateExternalIMAPShares(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if cfg.DBDriver != databaseDriverSQLite {
 		if err := checkNativeRestoreActivation(context.Background(), db, cfg.DBDriver, cfg.DataDir, cfg.MaildirRoot); err != nil {
 			db.Close()
