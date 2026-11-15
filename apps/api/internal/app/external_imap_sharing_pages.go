@@ -145,6 +145,26 @@ async function openMail(id){
    frame.srcdoc="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'\"><base target=\"_blank\">"+html;
    detail.append(frame)
   }else{detail.append(make("pre",m.bodyText||"（邮件没有正文）"))}
+  if((m.attachments||[]).length){
+   const box=make("section");box.append(make("h3","附件"));
+   (m.attachments||[]).forEach(att=>{
+    const button=make("button","下载 "+att.filename+" ("+Math.round(att.sizeBytes/1024)+" KB)");
+    button.className="refresh";button.style.margin="5px";
+    button.onclick=async()=>{
+     try{
+      const res=await fetch("/api/public/shared-inbox/messages/"+encodeURIComponent(m.id)+"/attachments/"+encodeURIComponent(att.id),{
+       cache:"no-store",headers:{"Authorization":"Bearer "+token}
+      });
+      if(!res.ok)throw Error("附件下载失败");
+      const u=URL.createObjectURL(await res.blob()),link=document.createElement("a");
+      link.href=u;link.download=att.filename||"attachment";document.body.append(link);link.click();link.remove();
+      setTimeout(()=>URL.revokeObjectURL(u),30000)
+     }catch(e){err.textContent=e.message}
+    };
+    box.append(button)
+   });
+   detail.append(box)
+  }
  }catch(e){clear(detail);detail.append(make("p",e.message))}
 }
 async function refresh(){
