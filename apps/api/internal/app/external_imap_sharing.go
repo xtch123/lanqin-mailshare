@@ -133,7 +133,11 @@ func (a *App) decryptExternalShareToken(encoded string) (string, error) {
 }
 
 func (a *App) externalShareURL(token string) string {
-	return strings.TrimRight(a.cfg.PublicBaseURL, "/") + "/api/public/shared-inbox#" + token
+	baseURL := strings.TrimSpace(a.cfg.ExternalIMAPShareBaseURL)
+	if baseURL == "" {
+		baseURL = a.cfg.PublicBaseURL
+	}
+	return strings.TrimRight(baseURL, "/") + "/api/public/shared-inbox#" + token
 }
 
 func externalShareExpiryValid(raw sql.NullString, now time.Time) bool {
