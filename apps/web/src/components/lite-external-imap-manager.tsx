@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { CheckCircle2, Inbox, LoaderCircle, Plus, RefreshCcw, ServerCog, Trash2 } from "lucide-react"
-import { api, type ExternalImapAccount, type ExternalImapAccountPayload, type ExternalImapTlsMode } from "@/lib/api"
+import { api, type ExternalImapAccount, type ExternalImapAccountPayload, type ExternalImapStorageMode, type ExternalImapTlsMode } from "@/lib/api"
 import { errorMessage } from "@/lib/ui-errors"
 import { formatDateTime } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
@@ -31,6 +31,7 @@ type EditorProps = {
 
 function ExternalAccountEditor({ account, mailboxId, busy, onClose, onSave }: EditorProps) {
   const [tlsMode, setTlsMode] = React.useState<ExternalImapTlsMode>(account?.tlsMode ?? "tls")
+  const [storageMode, setStorageMode] = React.useState<ExternalImapStorageMode>(account?.storageMode ?? "local")
   const [syncReadState, setSyncReadState] = React.useState(account?.syncReadState ?? true)
   const [enabled, setEnabled] = React.useState(account?.enabled ?? true)
   const [localError, setLocalError] = React.useState("")
@@ -48,7 +49,7 @@ function ExternalAccountEditor({ account, mailboxId, busy, onClose, onSave }: Ed
       tlsMode,
       username: String(form.get("username") || "").trim(),
       password: String(form.get("password") || ""),
-      storageMode: account?.storageMode || "local",
+      storageMode,
       syncReadState,
       enabled,
     }
@@ -104,6 +105,16 @@ function ExternalAccountEditor({ account, mailboxId, busy, onClose, onSave }: Ed
           </Select>
         </div>
         <div className="space-y-2">
+          <Label>存储模式</Label>
+          <Select value={storageMode} onValueChange={(value) => setStorageMode(value as ExternalImapStorageMode)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="local">同步到本地（共享必选）</SelectItem>
+              <SelectItem value="remote">远端直连（不能共享）</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
           <Label htmlFor="lite-imap-password">{account ? "密码（留空保持原密码）" : "IMAP 密码"}</Label>
           <div className="flex gap-2">
             <Input id="lite-imap-password" name="password" type={passwordVisible ? "text" : "password"} autoComplete="new-password" placeholder={account ? "不修改请留空" : "请输入邮箱密码"} />
@@ -124,7 +135,7 @@ function ExternalAccountEditor({ account, mailboxId, busy, onClose, onSave }: Ed
         </label>
       </div>
       <p className="text-xs text-muted-foreground">
-        {account?.storageMode === "remote" ? "该账号目前是远端直连模式。共享链接要求本地同步模式。" : "Lite 默认同步到本地 SQLite，供车友只读查看邮件。"}
+        {storageMode === "remote" ? "远端直连模式不能创建车友共享链接。若需要共享，请选择同步到本地。" : "同步到本地后，车友通过只读链接查看邮件；不提供发信能力。"}
       </p>
       {localError && <p role="alert" className="text-sm text-destructive">{localError}</p>}
       <div className="flex justify-end gap-2">
