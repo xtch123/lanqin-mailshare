@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	"database/sql"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"net/http"
 	"net/http/httptest"
