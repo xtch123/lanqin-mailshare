@@ -25,9 +25,10 @@ export function LiteAccountSettings() {
   const [newPassword, setNewPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
 
+  const savedDisplayName = me.data?.user?.displayName ?? ""
   React.useEffect(() => {
-    if (me.data?.user) setDisplayName(me.data.user.displayName)
-  }, [me.data?.user?.displayName])
+    if (savedDisplayName) setDisplayName(savedDisplayName)
+  }, [savedDisplayName])
 
   const saveProfile = useMutation({
     mutationFn: () => api.updateProfile({ displayName: displayName.trim() }),
