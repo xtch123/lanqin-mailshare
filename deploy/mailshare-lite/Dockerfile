@@ -19,6 +19,7 @@ RUN corepack enable && corepack prepare pnpm@10.28.2 --activate
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter lanqin-email-web...
 COPY apps/web apps/web
+ENV VITE_MAILSHARE_LITE=true
 RUN pnpm --dir apps/web run build
 
 FROM debian:bookworm-slim
@@ -37,7 +38,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -rf /var/lib/apt/lists/*
 COPY --from=api-build /out/lanqin-api /usr/local/bin/lanqin-api
 COPY --from=web-build /src/apps/web/dist /usr/share/nginx/html
-COPY deploy/all-in-one/nginx.conf /etc/nginx/sites-enabled/default
+COPY deploy/mailshare-lite/nginx.conf /etc/nginx/sites-enabled/default
 COPY deploy/mailshare-lite/entrypoint.sh /entrypoint.sh
 RUN chmod 755 /entrypoint.sh && mkdir -p /data /var/mail/vhosts /run/nginx
 EXPOSE 80
