@@ -1,4 +1,8 @@
 {
+  "先接入 seek.li 邮箱，再创建车友共享链接。": {
+    "zh-TW": "請先接入 seek.li 郵箱，再建立成員分享連結。",
+    "en": "Connect a seek.li mailbox first, then create a guest share link."
+  },
   "邮箱接入管理": {
     "zh-TW": "郵箱接入管理",
     "en": "Mailbox connections"
