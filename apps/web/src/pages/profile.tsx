@@ -209,8 +209,9 @@ export function ProfilePage() {
   React.useEffect(() => {
     // Previous Lite links to the full mailbox administration page should
     // return to the unified external IMAP manager instead.
-    if (MAILSHARE_LITE && rawTab === "mailboxes") {
-      navigate("/?view=accounts", { replace: true })
+    if (MAILSHARE_LITE) {
+      // All Lite settings live in its one sidebar and content surface.
+      navigate(rawTab === "mailboxes" ? "/?view=accounts" : "/?view=settings", { replace: true })
     }
   }, [navigate, rawTab])
   const user = me.data?.user
