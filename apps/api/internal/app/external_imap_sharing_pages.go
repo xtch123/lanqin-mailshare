@@ -155,13 +155,13 @@ button.danger:hover{background:#dc2626;border-color:#dc2626}
     </div>
     <div class="actions"><button id="create" type="button">生成专属链接</button><button id="refresh" type="button" class="secondary">刷新共享记录</button></div>
     <p id="message" role="alert"></p>
-    <div id="newLink"><b>专属链接已生成 · 请立即复制保存</b><div id="linkText" class="link"></div>
+    <div id="newLink"><b>共享链接已准备好 · 可随时从右侧再次复制</b><div id="linkText" class="link"></div>
      <div class="actions"><button id="copy" type="button">复制链接</button><a id="preview" href="#" target="_blank" rel="noopener noreferrer">预览车友页面 ↗</a></div>
     </div>
    </div>
   </section>
   <aside class="card">
-   <div class="card-head"><h2>已有共享</h2><p>按邮箱查看车友链接，支持随时复制或撤销。</p></div>
+   <div class="card-head"><h2>已有共享</h2><p>按外部邮箱筛选。新版链接可随时复制，旧版可重置。</p></div>
    <div class="share-filter"><label for="shareFilter">按邮箱筛选</label><select id="shareFilter"><option value="">全部外部邮箱</option></select></div>
    <div id="shares">读取中…</div>
    <div class="note">建议每位车友单独生成链接，避免一人退出后需要更换所有人的访问凭证。</div>
