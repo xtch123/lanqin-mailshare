@@ -232,6 +232,7 @@ async function loadPage(page,append){
  currentAccountName=data.accountName||"外部邮箱";
  const messages=data.items||[];
  subtitle.textContent=currentAccountName+" · 只读访问";
+ err.textContent="";
  if(!append){
   // Poll often, but only repaint the list when something actually changed.
   // This preserves scroll position and prevents flicker every five seconds.
