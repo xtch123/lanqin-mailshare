@@ -1,4 +1,5 @@
 import additionalTranslations from "./ui-translations.json"
+import liteTranslations from "./lite-ui-translations.json"
 import * as React from "react"
 
 export type Language = "zh-CN" | "zh-TW" | "en"
@@ -76,6 +77,7 @@ type Translation = { "zh-TW": string; en: string; enOne?: string; pluralIndex?: 
 
 export const exactTranslations: Record<string, Translation> = {
   ...additionalTranslations,
+  ...liteTranslations,
   收件箱: { "zh-TW": "收件匣", en: "Inbox" },
   已发送: { "zh-TW": "已傳送", en: "Sent" },
   草稿箱: { "zh-TW": "草稿匣", en: "Drafts" },

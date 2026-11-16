@@ -125,3 +125,28 @@ test("DNS diagnostics preserve host parameters and safely handle unknown server 
   setStoredLanguage("zh-TW")
   assert.equal(dnsCheckMessage("DKIM 公钥匹配", true), "DKIM 公鑰相符")
 })
+
+test("Lite management pages switch languages without English subtitle placeholders", () => {
+  const { uiText, setStoredLanguage, exactTranslations } = setup("zh-CN")
+  const keys = [
+    "邮箱接入管理",
+    "共享管理",
+    "账户设置",
+    "创建共享链接",
+    "外部邮箱",
+    "当前密码",
+    "删除记录",
+  ]
+  for (const key of keys) {
+    assert.equal(typeof exactTranslations[key]?.en, "string")
+    assert.equal(typeof exactTranslations[key]?.["zh-TW"], "string")
+  }
+  assert.equal(uiText("共享管理"), "共享管理")
+  setStoredLanguage("en")
+  assert.equal(uiText("共享管理"), "Share management")
+  assert.equal(uiText("邮箱接入管理"), "Mailbox connections")
+  assert.equal(uiText("最近 {0} 天", [7]), "Last 7 days")
+  setStoredLanguage("zh-TW")
+  assert.equal(uiText("账户设置"), "帳戶設定")
+  assert.equal(uiText("删除记录"), "刪除紀錄")
+})

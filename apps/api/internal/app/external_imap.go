@@ -1219,6 +1219,12 @@ func (a *App) migrateExternalIMAP(ctx context.Context) error {
 	return nil
 }
 
+func prioritizeExternalIMAPInbox(folders []externalIMAPRemoteFolder) {
+	sort.SliceStable(folders, func(i, j int) bool {
+		return strings.EqualFold(folders[i].Name, "INBOX") && !strings.EqualFold(folders[j].Name, "INBOX")
+	})
+}
+
 func (a *App) syncExternalIMAPAccount(ctx context.Context, accountID string) (ExternalIMAPSyncRun, error) {
 	account, err := a.externalIMAPAccountByID(ctx, accountID)
 	if err != nil {
@@ -1238,6 +1244,9 @@ func (a *App) syncExternalIMAPAccount(ctx context.Context, accountID string) (Ex
 	if err != nil {
 		return a.finishExternalIMAPRun(ctx, run, "failed", err)
 	}
+	// Prioritize the inbox so new verification emails reach the local
+	// share database before slower archival or sent-folder scans.
+	prioritizeExternalIMAPInbox(folders)
 	for _, folder := range folders {
 		imported, skipped, failed, err := a.syncExternalIMAPFolder(ctx, account, client, folder)
 		run.Imported += imported

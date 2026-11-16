@@ -82,6 +82,7 @@ import {
   Reply,
   RotateCcw,
   Search,
+  Share2,
   Send,
   Settings,
   ShieldCheck,
@@ -199,6 +200,9 @@ import {
 } from "@/components/ui/sidebar"
 import { MailHtmlFrame } from "@/components/mail-html-frame"
 import { MailAttachment } from "@/components/mail-attachment"
+import { LiteExternalIMAPManager } from "@/components/lite-external-imap-manager"
+import { LiteShareManager } from "@/components/lite-share-manager"
+import { LiteAccountSettings } from "@/components/lite-account-settings"
 import { useMe } from "@/hooks/use-me"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
@@ -235,7 +239,9 @@ type ComposeDraft = {
   isDraft?: boolean
 }
 type MailFilter = "all" | "unread" | "starred" | "attachments"
-type MailView = "folder" | "starred" | "label" | "scheduled" | "sendQueue" | "external"
+type MailView = "folder" | "starred" | "label" | "scheduled" | "sendQueue" | "external" | "shareManager" | "accountManager" | "accountSettings"
+
+const MAILSHARE_LITE = import.meta.env.VITE_MAILSHARE_LITE === "true"
 type MailListResponse = { items?: MailMessage[]; nextCursor?: string; totalCount?: number }
 type MailPageSize = 20 | 30 | 50
 type PendingConfirm = {
@@ -340,7 +346,16 @@ export function MailPage() {
   const deepLinkMessageId = urlParams.get("messageId") || ""
   const me = useMe()
   const [folder, setFolder] = React.useState("Inbox")
-  const [mailView, setMailView] = React.useState<MailView>("folder")
+  const [mailView, setMailView] = React.useState<MailView>(() => {
+    const view = new URLSearchParams(window.location.search).get("view")
+    return MAILSHARE_LITE && view === "shares"
+      ? "shareManager"
+      : MAILSHARE_LITE && view === "accounts"
+        ? "accountManager"
+        : MAILSHARE_LITE && view === "settings"
+          ? "accountSettings"
+          : "folder"
+  })
   const [selectedLabelId, setSelectedLabelId] = React.useState("")
   const [query, setQuery] = React.useState("")
   const [messagePageIndex, setMessagePageIndex] = React.useState(0)
@@ -418,6 +433,37 @@ export function MailPage() {
         : undefined,
     [externalImapEnabled, externalMailAccounts.data?.items, selectedExternalAccountId]
   )
+  React.useEffect(() => {
+    if (!MAILSHARE_LITE || mailView !== "folder" || !externalImapEnabled) return
+    const first = externalMailAccounts.data?.items?.[0]
+    if (!first) return
+    setSelectedExternalAccountId(first.id)
+    setExpandedExternalAccountIds([first.id])
+    setExternalFolder("INBOX")
+    setMailView("external")
+  }, [externalImapEnabled, externalMailAccounts.data?.items, mailView])
+
+  // Keep Lite panel selection in sync with the URL (including Back/Forward).
+  React.useEffect(() => {
+    if (!MAILSHARE_LITE) return
+    const view = urlParams.get("view")
+    if (view === "shares" || view === "accounts" || view === "settings") {
+      const target = view === "shares" ? "shareManager" : view === "accounts" ? "accountManager" : "accountSettings"
+      if (mailView !== target) setMailView(target)
+      return
+    }
+    if (mailView === "shareManager" || mailView === "accountManager" || mailView === "accountSettings") {
+      const first = externalMailAccounts.data?.items?.[0]
+      if (first) {
+        setSelectedExternalAccountId(first.id)
+        setExternalFolder("INBOX")
+        setMailView("external")
+      } else {
+        setMailView("folder")
+      }
+    }
+  }, [mailView, urlParams, externalMailAccounts.data?.items])
+
   const externalFolders = useQuery({
     queryKey: ["mail-external-folders", selectedExternalAccountId],
     queryFn: () => api.externalFolders(selectedExternalAccountId),
@@ -433,11 +479,11 @@ export function MailPage() {
   const canDownloadAttachments =
     hasAttachmentPermission &&
     (selectedMailboxOwned || selectedMailbox?.shareAllowsAttachments !== false)
-  const canSendSelectedMailbox = canSendMail && selectedMailboxOwned
-  const canManageSelectedDrafts = canManageDrafts && selectedMailboxOwned
-  const canScheduleSelectedMailbox = canScheduleMail && selectedMailboxOwned
-  const canOrganizeSelectedMailbox = canOrganizeMail && selectedMailboxOwned
-  const canManageSelectedLabels = canManageLabels && selectedMailboxOwned
+  const canSendSelectedMailbox = !MAILSHARE_LITE && canSendMail && selectedMailboxOwned
+  const canManageSelectedDrafts = !MAILSHARE_LITE && canManageDrafts && selectedMailboxOwned
+  const canScheduleSelectedMailbox = !MAILSHARE_LITE && canScheduleMail && selectedMailboxOwned
+  const canOrganizeSelectedMailbox = !MAILSHARE_LITE && canOrganizeMail && selectedMailboxOwned
+  const canManageSelectedLabels = !MAILSHARE_LITE && canManageLabels && selectedMailboxOwned
   const restrictedSharedMailbox =
     selectedMailbox?.access === "read" && selectedMailbox.shareScope === "custom"
   const hasMailboxes = (mailboxList.data?.items.length || 0) > 0
@@ -468,7 +514,7 @@ export function MailPage() {
     enabled: !!activeMailboxId && canScheduleSelectedMailbox,
     refetchInterval: mailView === "scheduled" ? 30000 : false,
   })
-  const canViewSendQueue = canReadMail && selectedMailboxOwned
+  const canViewSendQueue = !MAILSHARE_LITE && canReadMail && selectedMailboxOwned
   const sendQueue = useQuery({
     queryKey: [
       "send-queue",
@@ -507,12 +553,27 @@ export function MailPage() {
     if (mailView === "external") setMailView("folder")
   }, [externalImapEnabled, mailView])
   React.useEffect(() => {
-    const ids = new Set((externalMailAccounts.data?.items || []).map((item) => item.id))
+    const accounts = externalMailAccounts.data?.items
+    if (!accounts) return
+    const ids = new Set(accounts.map((item) => item.id))
     setExpandedExternalAccountIds((current) => {
       const next = current.filter((id) => ids.has(id))
       return next.length === current.length ? current : next
     })
-  }, [externalMailAccounts.data?.items])
+    if (!selectedExternalAccountId || ids.has(selectedExternalAccountId)) return
+    // Deleting an external IMAP account must also clear any stale selected
+    // account and message. Never keep showing the removed account's folders.
+    setSelectedId(null)
+    if (MAILSHARE_LITE && accounts.length > 0) {
+      setSelectedExternalAccountId(accounts[0].id)
+      setExternalFolder("INBOX")
+      // Do not unexpectedly leave account or share management after deletion.
+      if (mailView === "external" || mailView === "folder") setMailView("external")
+    } else {
+      setSelectedExternalAccountId("")
+      if (mailView === "external") setMailView("folder")
+    }
+  }, [externalMailAccounts.data?.items, selectedExternalAccountId, mailView])
   React.useEffect(() => {
     if (!restrictedSharedMailbox || !folders.isSuccess || !labels.isSuccess) return
     if (mailView === "folder" && folders.data.items.some((item) => item.name === folder)) return
@@ -549,6 +610,9 @@ export function MailPage() {
     enabled:
       !!activeMailboxId &&
       canReadMail &&
+      mailView !== "shareManager" &&
+      mailView !== "accountManager" &&
+      mailView !== "accountSettings" &&
       !isPlainInboxView &&
       (!restrictedSharedMailbox || !!folders.data?.items.some((item) => item.name === "Inbox")),
     refetchInterval: mailRefreshInterval,
@@ -581,6 +645,9 @@ export function MailPage() {
       mailView !== "scheduled" &&
       mailView !== "sendQueue" &&
       mailView !== "external" &&
+      mailView !== "shareManager" &&
+      mailView !== "accountManager" &&
+      mailView !== "accountSettings" &&
       (mailView !== "label" || !!selectedLabelId),
   })
   const externalMessages = useInfiniteQuery({
@@ -1360,7 +1427,13 @@ export function MailPage() {
   const labelItems = labels.data?.items || []
   const selectedLabel = labelItems.find((item) => item.id === selectedLabelId)
   const viewTitle =
-    mailView === "external"
+    mailView === "shareManager"
+      ? uiText("共享管理")
+      : mailView === "accountManager"
+        ? uiText("邮箱接入管理")
+        : mailView === "accountSettings"
+          ? uiText("账户设置")
+          : mailView === "external"
       ? `${selectedExternalAccount?.name || uiText("外部邮箱")} · ${folderLabels[externalFolder] ? uiText(folderLabels[externalFolder]) : externalFolder}`
       : mailView === "sendQueue"
         ? uiText("发送队列")
@@ -1840,7 +1913,129 @@ export function MailPage() {
   function openSettings() {
     navigate("/profile")
   }
-  const sidebarContent = (
+  const liteSidebarContent = (
+    <Sidebar collapsible="none" className="h-full w-full border-r bg-sidebar">
+      <SidebarHeader className={cn("border-b py-3", sidebarCollapsed ? "px-2" : "px-3")}>
+        <AccountHeader
+          collapsed={sidebarCollapsed}
+          name={me.data?.user.displayName || "LanQin MailShare"}
+          email={me.data?.user.email}
+          darkMode={darkMode}
+          onToggleTheme={() => setDarkMode((value) => !value)}
+          onSettings={() => {
+            setMailView("accountSettings")
+            setURLParams({ view: "settings" })
+          }}
+          showSettings={false}
+        />
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          {!sidebarCollapsed && <SidebarGroupLabel>{uiText("外部邮箱")}</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {externalAccountItems.map((account) => (
+                <SidebarMenuItem key={account.id}>
+                  <SidebarMenuButton
+                    isActive={mailView === "external" && selectedExternalAccountId === account.id}
+                    size={sidebarCollapsed ? "default" : "lg"}
+                    title={`${account.name || account.username} · ${account.username}`}
+                    className={cn(sidebarCollapsed && "justify-center px-0")}
+                    onClick={() => {
+                      openExternalFolder(account, "INBOX")
+                      if (urlParams.has("view")) setURLParams({})
+                    }}
+                  >
+                    <Inbox className="h-4 w-4 shrink-0" />
+                    {!sidebarCollapsed && (
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm">{account.name || account.username}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{account.username}</span>
+                      </span>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {!sidebarCollapsed && externalMailAccounts.isLoading && <FolderSkeleton />}
+              {!sidebarCollapsed && !externalMailAccounts.isLoading && externalAccountItems.length === 0 && (
+                <div className="px-2 py-3 text-xs text-muted-foreground">{uiText("尚未接入外部邮箱")}</div>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          {!sidebarCollapsed && <SidebarGroupLabel>{uiText("管理")}</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  title={uiText("邮箱接入管理")}
+                  className={cn(sidebarCollapsed && "justify-center px-0")}
+                  isActive={mailView === "accountManager"}
+                  onClick={() => {
+                    setMailView("accountManager")
+                    setSelectedId(null)
+                    setMobileSidebarOpen(false)
+                    setURLParams({ view: "accounts" })
+                  }}
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && <span>{uiText("邮箱接入管理")}</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={mailView === "shareManager"}
+                  title={uiText("共享管理")}
+                  className={cn(sidebarCollapsed && "justify-center px-0")}
+                  onClick={() => {
+                    setMailView("shareManager")
+                    setSelectedId(null)
+                    setMobileSidebarOpen(false)
+                    setURLParams({ view: "shares" })
+                  }}
+                >
+                  <Share2 className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && <span>{uiText("共享管理")}</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={mailView === "accountSettings"}
+                  title={uiText("账户设置")}
+                  className={cn(sidebarCollapsed && "justify-center px-0")}
+                  onClick={() => {
+                    setMailView("accountSettings")
+                    setSelectedId(null)
+                    setMobileSidebarOpen(false)
+                    setURLParams({ view: "settings" })
+                  }}
+                >
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && <span>{uiText("账户设置")}</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      {!isMobile && (
+        <div className={cn("mt-auto border-t p-2", sidebarCollapsed && "flex justify-center")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size={sidebarCollapsed ? "icon" : "sm"}
+            className={cn(!sidebarCollapsed && "w-full justify-start")}
+            onClick={toggleSidebar}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            {!sidebarCollapsed && <span>{uiText("收起侧栏")}</span>}
+          </Button>
+        </div>
+      )}
+    </Sidebar>
+  )
+  const sidebarContent = MAILSHARE_LITE ? liteSidebarContent : (
     <Sidebar collapsible="none" className="h-full w-full border-r bg-sidebar">
       <SidebarHeader className={cn("border-b py-3", sidebarCollapsed ? "px-2" : "px-3")}>
         <AccountHeader
@@ -2214,6 +2409,8 @@ export function MailPage() {
     }
   }
 
+  const hideLiteMailToolbar = MAILSHARE_LITE && (mailView === "shareManager" || mailView === "accountManager" || mailView === "accountSettings")
+
   const contentView = !canAccessMail ? (
     <PermissionEmptyState
       title={uiText("无邮箱前台权限")}
@@ -2226,6 +2423,42 @@ export function MailPage() {
       description={uiText("当前账号可以访问邮箱前台，但未开启邮件查看权限。")}
       onOpenSettings={openSettings}
     />
+  ) : MAILSHARE_LITE && mailView === "accountManager" ? (
+    <LiteExternalIMAPManager
+      accounts={externalAccountItems}
+      loading={externalMailAccounts.isLoading}
+      mailboxId={activeMailboxId}
+      onOpenInbox={(account) => {
+        openExternalFolder(account, "INBOX")
+        setURLParams({})
+      }}
+      onOpenShares={() => {
+        setMailView("shareManager")
+        setSelectedId(null)
+        setMobileSidebarOpen(false)
+        setURLParams({ view: "shares" })
+      }}
+    />
+  ) : MAILSHARE_LITE && mailView === "shareManager" ? (
+    <LiteShareManager
+      accounts={externalAccountItems}
+      onOpenAccounts={() => {
+        setMailView("accountManager")
+        setURLParams({ view: "accounts" })
+      }}
+    />
+  ) : MAILSHARE_LITE && mailView === "accountSettings" ? (
+    <LiteAccountSettings />
+  ) : MAILSHARE_LITE && !externalMailAccounts.isLoading && externalAccountItems.length === 0 ? (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+      <Inbox className="h-10 w-10 text-muted-foreground" />
+      <div className="text-lg font-medium">{uiText("还没有外部 IMAP 邮箱")}</div>
+      <p className="max-w-md text-sm text-muted-foreground">{uiText("先接入 seek.li 邮箱，再创建车友共享链接。")}</p>
+      <Button onClick={() => {
+        setMailView("accountManager")
+        setURLParams({ view: "accounts" })
+      }}>{uiText("添加外部邮箱")}</Button>
+    </div>
   ) : !mailboxList.isLoading && !hasMailboxes ? (
     <NoMailboxState onOpenSettings={openSettings} />
   ) : mailView === "scheduled" && canScheduleSelectedMailbox ? (
@@ -2596,7 +2829,8 @@ export function MailPage() {
                   disabled={refreshing || autoRefreshing}
                   className={cn(
                     "transition-all",
-                    (refreshing || autoRefreshing) && "bg-primary/5 text-primary"
+                    (refreshing || autoRefreshing) && "bg-primary/5 text-primary",
+                    hideLiteMailToolbar && "hidden"
                   )}
                   title={autoRefreshing ? uiText("自动刷新中") : uiText("刷新邮件")}
                 >
@@ -2630,7 +2864,7 @@ export function MailPage() {
                     <PencilLine className="h-4 w-4" />
                   </Button>
                 )}
-                {mailView !== "sendQueue" && (
+                {mailView !== "sendQueue" && !hideLiteMailToolbar && (
                   <div className="relative basis-full">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -2670,6 +2904,9 @@ export function MailPage() {
               <section className="flex h-full min-h-0 flex-col">
                 <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b px-5">
                   <div className="flex items-center gap-2">
+                    {hideLiteMailToolbar && (
+                      <span className="font-semibold text-sm">{viewTitle}</span>
+                    )}
                     <Button
                       size="icon"
                       variant="ghost"
@@ -2677,7 +2914,8 @@ export function MailPage() {
                       disabled={refreshing || autoRefreshing}
                       className={cn(
                         "transition-all",
-                        (refreshing || autoRefreshing) && "bg-primary/5 text-primary"
+                        (refreshing || autoRefreshing) && "bg-primary/5 text-primary",
+                        hideLiteMailToolbar && "hidden"
                       )}
                       title={autoRefreshing ? uiText("自动刷新中") : uiText("刷新邮件")}
                     >
@@ -2685,7 +2923,7 @@ export function MailPage() {
                         className={cn("h-4 w-4", (refreshing || autoRefreshing) && "animate-spin")}
                       />
                     </Button>
-                    {(publicSettings.data?.mailAutoRefresh || autoRefreshing) && (
+                    {!hideLiteMailToolbar && (publicSettings.data?.mailAutoRefresh || autoRefreshing) && (
                       <div className="hidden min-w-[118px] text-xs text-muted-foreground sm:block">
                         {autoRefreshing
                           ? uiText("自动刷新中...")
@@ -2701,6 +2939,7 @@ export function MailPage() {
                     )}
                     {mailView !== "scheduled" &&
                       mailView !== "sendQueue" &&
+                      !hideLiteMailToolbar &&
                       (mailView !== "external" || externalMessagesStoredLocally) && (
                         <>
                           {canOrganizeSelectedMailbox && (
@@ -2734,7 +2973,7 @@ export function MailPage() {
                         </>
                       )}
                   </div>
-                  {mailView !== "sendQueue" && (
+                  {mailView !== "sendQueue" && !hideLiteMailToolbar && (
                     <div className="relative w-full max-w-md">
                       <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -2859,6 +3098,14 @@ export function MailPage() {
   )
 }
 
+// External IMAP messages are stored in ordinary LanQin folders internally,
+// using names such as "External 0123456789ab deadbeef1234". They must NOT
+// appear as human-readable custom folders in the primary mailbox sidebar;
+// their parent accounts have a separate, appropriately labelled navigation.
+function isExternalIMAPStorageFolder(name: string): boolean {
+  return /^External [A-Za-z0-9_-]{1,12} [a-f0-9]{12}$/.test(name)
+}
+
 function buildMailMenuItems(
   folders: MailFolder[],
   starredCount: number,
@@ -2869,9 +3116,10 @@ function buildMailMenuItems(
   sendQueueCount: number,
   includeSendQueue: boolean
 ): MailMenuItem[] {
-  const byName = new Map(folders.map((item) => [item.name, item]))
+  const visibleFolders = folders.filter((item) => !isExternalIMAPStorageFolder(item.name))
+  const byName = new Map(visibleFolders.map((item) => [item.name, item]))
   const normalizedFolders = restrictedFolders
-    ? [...folders]
+    ? [...visibleFolders]
     : ["Inbox", "Drafts", "Sent", "Archive", "Spam", "Trash"].map(
         (name) =>
           byName.get(name) || {
@@ -2886,7 +3134,7 @@ function buildMailMenuItems(
             highestModseq: 1,
           }
       )
-  for (const item of folders) {
+  for (const item of visibleFolders) {
     if (!normalizedFolders.some((folder) => folder.name === item.name)) normalizedFolders.push(item)
   }
   const folderItems: MailMenuItem[] = normalizedFolders.map((item) => ({
@@ -5189,6 +5437,7 @@ function AccountHeader({
   darkMode,
   onToggleTheme,
   onSettings,
+  showSettings = true,
 }: {
   collapsed: boolean
   name: string
@@ -5196,6 +5445,7 @@ function AccountHeader({
   darkMode: boolean
   onToggleTheme: () => void
   onSettings: () => void
+  showSettings?: boolean
 }) {
   useUiLanguage()
 
@@ -5234,15 +5484,17 @@ function AccountHeader({
           {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         <LanguageSelector />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 rounded-md text-muted-foreground"
-          onClick={onSettings}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        {showSettings && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-md text-muted-foreground"
+            onClick={onSettings}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   )

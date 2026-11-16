@@ -110,6 +110,10 @@ func New(cfg Config, logger *slog.Logger) (*App, error) {
 		db.Close()
 		return nil, err
 	}
+	if err := a.migrateExternalIMAPShares(); err != nil {
+		db.Close()
+		return nil, err
+	}
 	if cfg.DBDriver != databaseDriverSQLite {
 		if err := checkNativeRestoreActivation(context.Background(), db, cfg.DBDriver, cfg.DataDir, cfg.MaildirRoot); err != nil {
 			db.Close()
@@ -131,25 +135,30 @@ func New(cfg Config, logger *slog.Logger) (*App, error) {
 	a.health.schemaInitialized.Store(true)
 	workerCtx, cancel := context.WithCancel(context.Background())
 	a.workerCancel = cancel
-	a.startWorker(func() { a.scheduledSendWorker(workerCtx) })
+	// Lite keeps the existing mail store and external IMAP client, but does
+	// not operate outgoing delivery, scheduled send, local SMTP delivery,
+	// notification or backup workers. Full deployments are unchanged.
+	if !a.cfg.MailShareLite {
+		a.startWorker(func() { a.scheduledSendWorker(workerCtx) })
+		a.startWorker(func() { a.sendQueueWorker(workerCtx) })
+		a.startWorker(func() { a.localDeliveryWorker(workerCtx) })
+		a.startWorker(func() { a.smtpEventsCleanupWorker(workerCtx) })
+		if _, err := a.backupCipher(); err == nil {
+			a.startWorker(func() { a.backupUploadWorker(workerCtx) })
+			a.startWorker(func() { a.backupScheduleWorker(workerCtx) })
+		}
+		if strings.TrimSpace(a.cfg.StatusWebhookURL) != "" {
+			a.startWorker(func() { a.statusWebhookWorker(workerCtx) })
+		}
+		if strings.TrimSpace(a.cfg.NotificationSecretKey) != "" {
+			a.startWorker(func() { a.telegramNotificationWorker(workerCtx) })
+		}
+	}
 	if strings.TrimSpace(a.cfg.MaildirRoot) != "" {
 		a.startWorker(func() { a.maildirWorker(workerCtx) })
 	}
-	a.startWorker(func() { a.sendQueueWorker(workerCtx) })
-	a.startWorker(func() { a.localDeliveryWorker(workerCtx) })
 	a.startWorker(func() { a.externalIMAPWorker(workerCtx) })
-	a.startWorker(func() { a.smtpEventsCleanupWorker(workerCtx) })
 	a.startWorker(func() { a.sessionCleanupWorker(workerCtx) })
-	if _, err := a.backupCipher(); err == nil {
-		a.startWorker(func() { a.backupUploadWorker(workerCtx) })
-		a.startWorker(func() { a.backupScheduleWorker(workerCtx) })
-	}
-	if strings.TrimSpace(a.cfg.StatusWebhookURL) != "" {
-		a.startWorker(func() { a.statusWebhookWorker(workerCtx) })
-	}
-	if strings.TrimSpace(a.cfg.NotificationSecretKey) != "" {
-		a.startWorker(func() { a.telegramNotificationWorker(workerCtx) })
-	}
 	return a, nil
 }
 

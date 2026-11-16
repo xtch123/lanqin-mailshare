@@ -489,6 +489,27 @@ export type ExternalImapAccount = {
   createdAt: string
   updatedAt: string
 }
+export type ExternalImapShare = {
+  id: string
+  accountId: string
+  accountName: string
+  accountEmail: string
+  label: string
+  visibilityMinutes: number
+  createdAt: string
+  expiresAt: string | null
+  revokedAt: string | null
+  lastAccessedAt: string | null
+  canCopy: boolean
+}
+
+export type ExternalImapShareCreate = {
+  accountId: string
+  label: string
+  visibilityMinutes: number
+  expiresAt?: string
+}
+
 export type ExternalImapAccountPayload = {
   mailboxId: string
   name: string

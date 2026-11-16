@@ -180,6 +180,7 @@ const tabs: Record<Tab, { label: string; icon: React.ReactNode }> = {
   stats: { label: "数据统计", icon: <BarChart3 className="h-4 w-4" /> },
 }
 const tabKeys = Object.keys(tabs) as Tab[]
+const MAILSHARE_LITE = import.meta.env.VITE_MAILSHARE_LITE === "true"
 export function ProfilePage() {
   useUiLanguage()
 
@@ -205,6 +206,14 @@ export function ProfilePage() {
   const themeMountedRef = React.useRef(false)
 
   const rawTab = params.get("tab") as Tab | null
+  React.useEffect(() => {
+    // Previous Lite links to the full mailbox administration page should
+    // return to the unified external IMAP manager instead.
+    if (MAILSHARE_LITE) {
+      // All Lite settings live in its one sidebar and content surface.
+      navigate(rawTab === "mailboxes" ? "/?view=accounts" : "/?view=settings", { replace: true })
+    }
+  }, [navigate, rawTab])
   const user = me.data?.user
   const canAccessMail = hasPermission(user, "mail.access")
   const canReadMail = hasPermission(user, "mail.messages.read")
@@ -217,6 +226,7 @@ export function ProfilePage() {
   const canViewStats = hasPermission(user, "mail.stats.view")
   const canApplyMailbox = hasPermission(user, "mail.mailboxes.apply")
   const visibleTabKeys = tabKeys.filter((key) => {
+    if (MAILSHARE_LITE) return key === "profile"
     if (key === "profile") return true
     if (key === "apiTokens") return true
     if (key === "mailboxes") return canAccessMail || canApplyMailbox

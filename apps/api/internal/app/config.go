@@ -60,6 +60,7 @@ type Config struct {
 	UserMailboxDomainIDs            string
 	ReservedMailboxPrefixes         string
 	ExternalIMAPEnabled             bool
+	MailShareLite                   bool
 	ExternalIMAPSecretKey           string
 	ExternalIMAPSyncSeconds         int
 	ExternalIMAPAllowPrivateHosts   bool
@@ -139,6 +140,7 @@ func LoadConfig() Config {
 		UserMailboxDomainIDs:            getenv("LANQIN_USER_MAILBOX_DOMAIN_IDS", ""),
 		ReservedMailboxPrefixes:         getenv("LANQIN_RESERVED_MAILBOX_PREFIXES", "admin,postmaster,abuse,hostmaster,webmaster,root,security,noreply,no-reply,mailer-daemon"),
 		ExternalIMAPEnabled:             getenvBool("LANQIN_EXTERNAL_IMAP_ENABLED", false),
+		MailShareLite:                   getenvBool("LANQIN_MAILSHARE_LITE", false),
 		ExternalIMAPSecretKey:           getenv("LANQIN_EXTERNAL_IMAP_SECRET_KEY", ""),
 		ExternalIMAPSyncSeconds:         getenvInt("LANQIN_EXTERNAL_IMAP_SYNC_SECONDS", 300),
 		ExternalIMAPAllowPrivateHosts:   getenvBool("LANQIN_EXTERNAL_IMAP_ALLOW_PRIVATE_HOSTS", false),
