@@ -20,7 +20,8 @@ RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --filter lanqin-email-web...
 COPY apps/web apps/web
 ENV VITE_MAILSHARE_LITE=true
-RUN pnpm --dir apps/web run build
+# Verify all three Lite languages before producing the release assets.
+RUN pnpm --dir apps/web run check:i18n && pnpm --dir apps/web run build
 
 FROM debian:bookworm-slim
 ENV DEBIAN_FRONTEND=noninteractive \
