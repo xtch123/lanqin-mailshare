@@ -235,3 +235,20 @@ func TestExternalIMAPShareMatchesLanQinThemeAndKeepsActionsOnOneLine(t *testing.
 		}
 	}
 }
+
+func TestExternalIMAPShareFastViewerPolling(t *testing.T) {
+	a := newTestApp(t)
+	response := httptest.NewRecorder()
+	a.handleExternalIMAPShareViewerJS(response, httptest.NewRequest(http.MethodGet, "/api/public/shared-inbox/app.js", nil))
+	body := response.Body.String()
+	for _, required := range []string{
+		"setInterval(()=>{if(!document.hidden)refresh()},5000)",
+		"if(snapshot===firstPageSnapshot)return",
+		"if(refreshInFlight)return",
+		"visibilitychange",
+	} {
+		if !strings.Contains(body, required) {
+			t.Fatalf("fast inbox polling safeguard missing: %s", required)
+		}
+	}
+}
