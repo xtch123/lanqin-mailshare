@@ -74,9 +74,9 @@ async function loadShares(){
   const row=document.createElement("div");row.className="item";
   const info=document.createElement("div");
   const name=document.createElement("span");name.className="share-account";
-  name.textContent=s.accountName||s.accountEmail||s.accountId;
+  name.textContent=s.accountName||s.accountEmail||"未命名外部邮箱";
   const address=document.createElement("span");address.className="share-address";
-  address.textContent=s.accountEmail||s.accountId;
+  address.textContent=s.accountEmail||"邮箱地址不可用";
   const note=document.createElement("span");note.className="share-label";
   note.textContent="车友："+(s.label||"未命名");
   const details=document.createElement("small");
