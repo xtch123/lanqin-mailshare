@@ -82,6 +82,7 @@ import {
   Reply,
   RotateCcw,
   Search,
+  Share2,
   Send,
   Settings,
   ShieldCheck,
@@ -235,7 +236,9 @@ type ComposeDraft = {
   isDraft?: boolean
 }
 type MailFilter = "all" | "unread" | "starred" | "attachments"
-type MailView = "folder" | "starred" | "label" | "scheduled" | "sendQueue" | "external"
+type MailView = "folder" | "starred" | "label" | "scheduled" | "sendQueue" | "external" | "shareManager"
+
+const MAILSHARE_LITE = import.meta.env.VITE_MAILSHARE_LITE === "true"
 type MailListResponse = { items?: MailMessage[]; nextCursor?: string; totalCount?: number }
 type MailPageSize = 20 | 30 | 50
 type PendingConfirm = {
@@ -340,7 +343,7 @@ export function MailPage() {
   const deepLinkMessageId = urlParams.get("messageId") || ""
   const me = useMe()
   const [folder, setFolder] = React.useState("Inbox")
-  const [mailView, setMailView] = React.useState<MailView>("folder")
+  const [mailView, setMailView] = React.useState<MailView>(MAILSHARE_LITE && new URLSearchParams(window.location.search).get("view") === "shares" ? "shareManager" : "folder")
   const [selectedLabelId, setSelectedLabelId] = React.useState("")
   const [query, setQuery] = React.useState("")
   const [messagePageIndex, setMessagePageIndex] = React.useState(0)
@@ -418,6 +421,16 @@ export function MailPage() {
         : undefined,
     [externalImapEnabled, externalMailAccounts.data?.items, selectedExternalAccountId]
   )
+  React.useEffect(() => {
+    if (!MAILSHARE_LITE || mailView !== "folder" || !externalImapEnabled) return
+    const first = externalMailAccounts.data?.items?.[0]
+    if (!first) return
+    setSelectedExternalAccountId(first.id)
+    setExpandedExternalAccountIds([first.id])
+    setExternalFolder("INBOX")
+    setMailView("external")
+  }, [externalImapEnabled, externalMailAccounts.data?.items, mailView])
+
   const externalFolders = useQuery({
     queryKey: ["mail-external-folders", selectedExternalAccountId],
     queryFn: () => api.externalFolders(selectedExternalAccountId),
@@ -433,11 +446,11 @@ export function MailPage() {
   const canDownloadAttachments =
     hasAttachmentPermission &&
     (selectedMailboxOwned || selectedMailbox?.shareAllowsAttachments !== false)
-  const canSendSelectedMailbox = canSendMail && selectedMailboxOwned
-  const canManageSelectedDrafts = canManageDrafts && selectedMailboxOwned
-  const canScheduleSelectedMailbox = canScheduleMail && selectedMailboxOwned
-  const canOrganizeSelectedMailbox = canOrganizeMail && selectedMailboxOwned
-  const canManageSelectedLabels = canManageLabels && selectedMailboxOwned
+  const canSendSelectedMailbox = !MAILSHARE_LITE && canSendMail && selectedMailboxOwned
+  const canManageSelectedDrafts = !MAILSHARE_LITE && canManageDrafts && selectedMailboxOwned
+  const canScheduleSelectedMailbox = !MAILSHARE_LITE && canScheduleMail && selectedMailboxOwned
+  const canOrganizeSelectedMailbox = !MAILSHARE_LITE && canOrganizeMail && selectedMailboxOwned
+  const canManageSelectedLabels = !MAILSHARE_LITE && canManageLabels && selectedMailboxOwned
   const restrictedSharedMailbox =
     selectedMailbox?.access === "read" && selectedMailbox.shareScope === "custom"
   const hasMailboxes = (mailboxList.data?.items.length || 0) > 0
@@ -468,7 +481,7 @@ export function MailPage() {
     enabled: !!activeMailboxId && canScheduleSelectedMailbox,
     refetchInterval: mailView === "scheduled" ? 30000 : false,
   })
-  const canViewSendQueue = canReadMail && selectedMailboxOwned
+  const canViewSendQueue = !MAILSHARE_LITE && canReadMail && selectedMailboxOwned
   const sendQueue = useQuery({
     queryKey: [
       "send-queue",
@@ -1360,7 +1373,9 @@ export function MailPage() {
   const labelItems = labels.data?.items || []
   const selectedLabel = labelItems.find((item) => item.id === selectedLabelId)
   const viewTitle =
-    mailView === "external"
+    mailView === "shareManager"
+      ? "共享管理"
+      : mailView === "external"
       ? `${selectedExternalAccount?.name || uiText("外部邮箱")} · ${folderLabels[externalFolder] ? uiText(folderLabels[externalFolder]) : externalFolder}`
       : mailView === "sendQueue"
         ? uiText("发送队列")
@@ -1840,7 +1855,106 @@ export function MailPage() {
   function openSettings() {
     navigate("/profile")
   }
-  const sidebarContent = (
+  const liteSidebarContent = (
+    <Sidebar collapsible="none" className="h-full w-full border-r bg-sidebar">
+      <SidebarHeader className={cn("border-b py-3", sidebarCollapsed ? "px-2" : "px-3")}>
+        <AccountHeader
+          collapsed={sidebarCollapsed}
+          name={me.data?.user.displayName || "LanQin MailShare"}
+          email={me.data?.user.email}
+          darkMode={darkMode}
+          onToggleTheme={() => setDarkMode((value) => !value)}
+          onSettings={() => navigate("/profile?tab=profile")}
+        />
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          {!sidebarCollapsed && <SidebarGroupLabel>外部邮箱</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {externalAccountItems.map((account) => (
+                <SidebarMenuItem key={account.id}>
+                  <SidebarMenuButton
+                    isActive={mailView === "external" && selectedExternalAccountId === account.id}
+                    size={sidebarCollapsed ? "default" : "lg"}
+                    title={`${account.name || account.username} · ${account.username}`}
+                    className={cn(sidebarCollapsed && "justify-center px-0")}
+                    onClick={() => {
+                      openExternalFolder(account, "INBOX")
+                      if (urlParams.has("view")) setURLParams({})
+                    }}
+                  >
+                    <Inbox className="h-4 w-4 shrink-0" />
+                    {!sidebarCollapsed && (
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm">{account.name || account.username}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{account.username}</span>
+                      </span>
+                    )}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+              {!sidebarCollapsed && externalMailAccounts.isLoading && <FolderSkeleton />}
+              {!sidebarCollapsed && !externalMailAccounts.isLoading && externalAccountItems.length === 0 && (
+                <div className="px-2 py-3 text-xs text-muted-foreground">尚未接入外部邮箱</div>
+              )}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          {!sidebarCollapsed && <SidebarGroupLabel>管理</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  title="邮箱接入管理"
+                  className={cn(sidebarCollapsed && "justify-center px-0")}
+                  onClick={() => {
+                    setMobileSidebarOpen(false)
+                    navigate("/profile?tab=mailboxes")
+                  }}
+                >
+                  <Settings className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && <span>邮箱接入管理</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={mailView === "shareManager"}
+                  title="共享管理"
+                  className={cn(sidebarCollapsed && "justify-center px-0")}
+                  onClick={() => {
+                    setMailView("shareManager")
+                    setSelectedId(null)
+                    setMobileSidebarOpen(false)
+                    setURLParams({ view: "shares" })
+                  }}
+                >
+                  <Share2 className="h-4 w-4 shrink-0" />
+                  {!sidebarCollapsed && <span>共享管理</span>}
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      {!isMobile && (
+        <div className={cn("mt-auto border-t p-2", sidebarCollapsed && "flex justify-center")}>
+          <Button
+            type="button"
+            variant="ghost"
+            size={sidebarCollapsed ? "icon" : "sm"}
+            className={cn(!sidebarCollapsed && "w-full justify-start")}
+            onClick={toggleSidebar}
+          >
+            {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            {!sidebarCollapsed && <span>收起侧栏</span>}
+          </Button>
+        </div>
+      )}
+    </Sidebar>
+  )
+  const sidebarContent = MAILSHARE_LITE ? liteSidebarContent : (
     <Sidebar collapsible="none" className="h-full w-full border-r bg-sidebar">
       <SidebarHeader className={cn("border-b py-3", sidebarCollapsed ? "px-2" : "px-3")}>
         <AccountHeader
@@ -2226,6 +2340,20 @@ export function MailPage() {
       description={uiText("当前账号可以访问邮箱前台，但未开启邮件查看权限。")}
       onOpenSettings={openSettings}
     />
+  ) : MAILSHARE_LITE && mailView === "shareManager" ? (
+    <iframe
+      title="外部邮箱共享管理"
+      src="/api/me/external-imap-share-panel?embed=1"
+      className="h-full min-h-0 w-full flex-1 border-0 bg-background"
+      referrerPolicy="no-referrer"
+    />
+  ) : MAILSHARE_LITE && !externalMailAccounts.isLoading && externalAccountItems.length === 0 ? (
+    <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+      <Inbox className="h-10 w-10 text-muted-foreground" />
+      <div className="text-lg font-medium">还没有外部 IMAP 邮箱</div>
+      <p className="max-w-md text-sm text-muted-foreground">先接入 seek.li 邮箱，再创建车友共享链接。</p>
+      <Button onClick={() => navigate("/profile?tab=mailboxes")}>添加外部邮箱</Button>
+    </div>
   ) : !mailboxList.isLoading && !hasMailboxes ? (
     <NoMailboxState onOpenSettings={openSettings} />
   ) : mailView === "scheduled" && canScheduleSelectedMailbox ? (
