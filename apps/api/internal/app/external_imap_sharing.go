@@ -367,6 +367,29 @@ func (a *App) handleRevokeExternalIMAPShare(w http.ResponseWriter, r *http.Reque
 	respondJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
+// Permanently remove an already-revoked sharing record belonging to the
+// authenticated mailbox owner. This never touches the external mailbox,
+// synced email, attachments or other accounts' sharing records.
+func (a *App) handleDeleteRevokedExternalIMAPShare(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(chi.URLParam(r, "id"))
+	result, err := a.db.ExecContext(r.Context(), `DELETE FROM external_imap_share_links
+		WHERE id=? AND revoked_at IS NOT NULL AND owner_user_id=? AND EXISTS (
+			SELECT 1 FROM external_imap_accounts a
+			WHERE a.id=external_imap_share_links.account_id
+			  AND a.user_id=external_imap_share_links.owner_user_id
+		)`, id, currentUser(r).ID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to delete revoked share record")
+		return
+	}
+	deleted, _ := result.RowsAffected()
+	if deleted != 1 {
+		respondError(w, http.StatusNotFound, "revoked sharing record not found")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
 // Public requests NEVER acquire a regular user context or reuse the owner's
 // authenticated external-IMAP endpoints. Each request is independently scoped.
 func (a *App) externalIMAPShareFromRequest(r *http.Request) (*externalIMAPShareAccess, error) {
