@@ -2,6 +2,8 @@ package app
 
 import (
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
@@ -31,6 +33,7 @@ type externalIMAPShareLink struct {
 	AccountID         string  `json:"accountId"`
 	AccountName       string  `json:"accountName"`
 	AccountEmail      string  `json:"accountEmail"`
+	CanCopy           bool    `json:"canCopy"`
 	Label             string  `json:"label"`
 	VisibilityMinutes int64   `json:"visibilityMinutes"`
 	CreatedAt         string  `json:"createdAt"`
@@ -60,8 +63,18 @@ func (a *App) migrateExternalIMAPShares() error {
 		created_at VARCHAR(40) NOT NULL,
 		expires_at VARCHAR(40),
 		revoked_at VARCHAR(40),
-		last_accessed_at VARCHAR(40)
+		last_accessed_at VARCHAR(40),
+		token_ciphertext TEXT
 	)`)
+	if err != nil {
+		return err
+	}
+	// Existing test installations may have the original table already.
+	rows, err := a.db.Query(`SELECT token_ciphertext FROM external_imap_share_links LIMIT 0`)
+	if err == nil {
+		return rows.Close()
+	}
+	_, err = a.db.Exec(`ALTER TABLE external_imap_share_links ADD COLUMN token_ciphertext TEXT`)
 	return err
 }
 
@@ -73,6 +86,62 @@ func newExternalIMAPShareToken() (string, string, error) {
 	token := base64.RawURLEncoding.EncodeToString(bytes[:])
 	digest := sha256.Sum256([]byte(token))
 	return token, hex.EncodeToString(digest[:]), nil
+}
+
+// A separate purpose-bound key keeps the reversible link capability independent
+// from IMAP account encryption even when using the same master secret.
+func (a *App) externalShareAEAD() (cipher.AEAD, error) {
+	secret := strings.TrimSpace(a.cfg.ExternalIMAPSecretKey)
+	if secret == "" {
+		return nil, errors.New("external IMAP encryption key is not configured")
+	}
+	key := sha256.Sum256([]byte("lanqin/external-imap-share-token/v1:" + secret))
+	block, err := aes.NewCipher(key[:])
+	if err != nil {
+		return nil, err
+	}
+	return cipher.NewGCM(block)
+}
+
+func (a *App) encryptExternalShareToken(token string) (string, error) {
+	gcm, err := a.externalShareAEAD()
+	if err != nil {
+		return "", err
+	}
+	nonce := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(nonce); err != nil {
+		return "", err
+	}
+	payload := gcm.Seal(nonce, nonce, []byte(token), nil)
+	return base64.RawURLEncoding.EncodeToString(payload), nil
+}
+
+func (a *App) decryptExternalShareToken(encoded string) (string, error) {
+	gcm, err := a.externalShareAEAD()
+	if err != nil {
+		return "", err
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(encoded)
+	if err != nil || len(payload) < gcm.NonceSize() {
+		return "", errors.New("invalid encrypted share token")
+	}
+	token, err := gcm.Open(nil, payload[:gcm.NonceSize()], payload[gcm.NonceSize():], nil)
+	if err != nil {
+		return "", errors.New("could not decrypt share token")
+	}
+	return string(token), nil
+}
+
+func (a *App) externalShareURL(token string) string {
+	return strings.TrimRight(a.cfg.PublicBaseURL, "/") + "/api/public/shared-inbox#" + token
+}
+
+func externalShareExpiryValid(raw sql.NullString, now time.Time) bool {
+	if !raw.Valid {
+		return true
+	}
+	end, err := time.Parse(time.RFC3339Nano, raw.String)
+	return err == nil && now.Before(end)
 }
 
 func validateExternalIMAPShareWindow(minutes int64, rawExpiry *string, now time.Time) (*string, error) {
@@ -123,6 +192,11 @@ func (a *App) handleCreateExternalIMAPShare(w http.ResponseWriter, r *http.Reque
 		respondError(w, http.StatusInternalServerError, "could not generate share token")
 		return
 	}
+	encryptedToken, err := a.encryptExternalShareToken(token)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to encrypt share token")
+		return
+	}
 	id := newID("xshare")
 	stamp := now.Format(time.RFC3339Nano)
 	var expires any
@@ -130,21 +204,17 @@ func (a *App) handleCreateExternalIMAPShare(w http.ResponseWriter, r *http.Reque
 		expires = *expiry
 	}
 	_, err = a.db.ExecContext(r.Context(), `INSERT INTO external_imap_share_links
-		(id,account_id,owner_user_id,label,token_sha256,visibility_minutes,created_at,expires_at)
-		VALUES(?,?,?,?,?,?,?,?)`,
-		id, account.ID, account.UserID, input.Label, digest, input.VisibilityMinutes, stamp, expires)
+		(id,account_id,owner_user_id,label,token_sha256,token_ciphertext,visibility_minutes,created_at,expires_at)
+		VALUES(?,?,?,?,?,?,?,?,?)`,
+		id, account.ID, account.UserID, input.Label, digest, encryptedToken, input.VisibilityMinutes, stamp, expires)
 	if err != nil {
 		respondError(w, http.StatusInternalServerError, "failed to create share")
 		return
 	}
-	base := strings.TrimRight(a.cfg.PublicBaseURL, "/")
-	if base == "" {
-		base = "http://" + r.Host
-	}
 	respondJSON(w, http.StatusCreated, map[string]any{
 		"id": id, "accountId": account.ID, "label": input.Label,
 		"visibilityMinutes": input.VisibilityMinutes, "expiresAt": expiry,
-		"url": base + "/api/public/shared-inbox#" + token,
+		"url": a.externalShareURL(token),
 	})
 }
 
@@ -156,7 +226,7 @@ func (a *App) handleListExternalIMAPShares(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	}
-	query := `SELECT s.id,s.account_id,a.name,a.username,s.label,s.visibility_minutes,s.created_at,s.expires_at,s.revoked_at,s.last_accessed_at
+	query := `SELECT s.id,s.account_id,a.name,a.username,s.label,s.visibility_minutes,s.created_at,s.expires_at,s.revoked_at,s.last_accessed_at,s.token_ciphertext
 		FROM external_imap_share_links s JOIN external_imap_accounts a ON a.id=s.account_id
 		WHERE a.user_id=? AND s.owner_user_id=a.user_id`
 	args := []any{currentUser(r).ID}
@@ -174,8 +244,8 @@ func (a *App) handleListExternalIMAPShares(w http.ResponseWriter, r *http.Reques
 	items := []externalIMAPShareLink{}
 	for rows.Next() {
 		var item externalIMAPShareLink
-		var expiry, revoked, accessed sql.NullString
-		if err := rows.Scan(&item.ID, &item.AccountID, &item.AccountName, &item.AccountEmail, &item.Label, &item.VisibilityMinutes, &item.CreatedAt, &expiry, &revoked, &accessed); err != nil {
+		var expiry, revoked, accessed, encrypted sql.NullString
+		if err := rows.Scan(&item.ID, &item.AccountID, &item.AccountName, &item.AccountEmail, &item.Label, &item.VisibilityMinutes, &item.CreatedAt, &expiry, &revoked, &accessed, &encrypted); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to read shares")
 			return
 		}
@@ -188,6 +258,7 @@ func (a *App) handleListExternalIMAPShares(w http.ResponseWriter, r *http.Reques
 		if accessed.Valid {
 			item.LastAccessedAt = &accessed.String
 		}
+		item.CanCopy = encrypted.Valid && encrypted.String != ""
 		items = append(items, item)
 	}
 	if err := rows.Err(); err != nil {
@@ -195,6 +266,84 @@ func (a *App) handleListExternalIMAPShares(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+// Reading or rotating a guest capability is an authenticated owner-only action.
+// The token is never included in list responses or URLs to these endpoints.
+func (a *App) handleGetExternalIMAPShareLink(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	id := chi.URLParam(r, "id")
+	var encoded sql.NullString
+	var expiry sql.NullString
+	err := a.db.QueryRowContext(r.Context(), `SELECT s.token_ciphertext,s.expires_at
+		FROM external_imap_share_links s
+		JOIN external_imap_accounts a ON a.id=s.account_id
+		WHERE s.id=? AND s.revoked_at IS NULL
+			AND a.user_id=? AND s.owner_user_id=a.user_id
+			AND a.enabled=1 AND a.storage_mode='local'`,
+		id, currentUser(r).ID).Scan(&encoded, &expiry)
+	if err != nil || !externalShareExpiryValid(expiry, a.now()) {
+		respondError(w, http.StatusNotFound, "active sharing link not found")
+		return
+	}
+	if !encoded.Valid || encoded.String == "" {
+		respondError(w, http.StatusConflict, "legacy share token cannot be recovered; rotate to get a new link")
+		return
+	}
+	token, err := a.decryptExternalShareToken(encoded.String)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to recover share link")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"url": a.externalShareURL(token)})
+}
+
+// Rotating preserves the account, visibility and expiry, but invalidates every
+// previously issued copy immediately. It can upgrade legacy hash-only shares.
+func (a *App) handleRotateExternalIMAPShareLink(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Referrer-Policy", "no-referrer")
+	id := chi.URLParam(r, "id")
+	var expiry sql.NullString
+	err := a.db.QueryRowContext(r.Context(), `SELECT s.expires_at
+		FROM external_imap_share_links s JOIN external_imap_accounts a ON a.id=s.account_id
+		WHERE s.id=? AND s.revoked_at IS NULL
+			AND a.user_id=? AND s.owner_user_id=a.user_id
+			AND a.enabled=1 AND a.storage_mode='local'`,
+		id, currentUser(r).ID).Scan(&expiry)
+	if err != nil || !externalShareExpiryValid(expiry, a.now()) {
+		respondError(w, http.StatusNotFound, "active sharing link not found")
+		return
+	}
+	token, digest, err := newExternalIMAPShareToken()
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to generate share token")
+		return
+	}
+	encrypted, err := a.encryptExternalShareToken(token)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to encrypt share token")
+		return
+	}
+	result, err := a.db.ExecContext(r.Context(), `UPDATE external_imap_share_links
+		SET token_sha256=?,token_ciphertext=?
+		WHERE id=? AND owner_user_id=? AND revoked_at IS NULL
+		  AND EXISTS (
+			SELECT 1 FROM external_imap_accounts a
+			WHERE a.id=external_imap_share_links.account_id
+			  AND a.user_id=? AND a.enabled=1 AND a.storage_mode='local'
+		  )`, digest, encrypted, id, currentUser(r).ID, currentUser(r).ID)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "failed to rotate share token")
+		return
+	}
+	changed, _ := result.RowsAffected()
+	if changed != 1 {
+		respondError(w, http.StatusNotFound, "active sharing link not found")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"url": a.externalShareURL(token)})
 }
 
 func (a *App) handleRevokeExternalIMAPShare(w http.ResponseWriter, r *http.Request) {
