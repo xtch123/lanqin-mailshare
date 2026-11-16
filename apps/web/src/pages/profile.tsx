@@ -180,6 +180,7 @@ const tabs: Record<Tab, { label: string; icon: React.ReactNode }> = {
   stats: { label: "数据统计", icon: <BarChart3 className="h-4 w-4" /> },
 }
 const tabKeys = Object.keys(tabs) as Tab[]
+const MAILSHARE_LITE = import.meta.env.VITE_MAILSHARE_LITE === "true"
 export function ProfilePage() {
   useUiLanguage()
 
@@ -217,6 +218,9 @@ export function ProfilePage() {
   const canViewStats = hasPermission(user, "mail.stats.view")
   const canApplyMailbox = hasPermission(user, "mail.mailboxes.apply")
   const visibleTabKeys = tabKeys.filter((key) => {
+    if (MAILSHARE_LITE) {
+      return key === "profile" || (key === "mailboxes" && (canAccessMail || canApplyMailbox))
+    }
     if (key === "profile") return true
     if (key === "apiTokens") return true
     if (key === "mailboxes") return canAccessMail || canApplyMailbox
@@ -772,8 +776,37 @@ export function ProfilePage() {
         />
       </SidebarHeader>
       <SidebarContent>
+        {MAILSHARE_LITE && (
+          <SidebarGroup>
+            {!sidebarCollapsed && <SidebarGroupLabel>邮箱共享</SidebarGroupLabel>}
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    title="外部邮箱收件箱"
+                    className={cn(sidebarCollapsed && "justify-center px-0")}
+                    onClick={() => navigate("/")}
+                  >
+                    <Mail className="h-4 w-4" />
+                    {!sidebarCollapsed && <span>外部邮箱收件箱</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    title="共享管理"
+                    className={cn(sidebarCollapsed && "justify-center px-0")}
+                    onClick={() => navigate("/?view=shares")}
+                  >
+                    <Share2 className="h-4 w-4" />
+                    {!sidebarCollapsed && <span>共享管理</span>}
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         <SidebarGroup>
-          {!sidebarCollapsed && <SidebarGroupLabel>{uiText("个人中心")}</SidebarGroupLabel>}
+          {!sidebarCollapsed && <SidebarGroupLabel>{MAILSHARE_LITE ? "设置" : uiText("个人中心")}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {visibleTabKeys.map((key) => (
