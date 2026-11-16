@@ -1,13 +1,21 @@
 package app
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 // First-cut pages are self-contained so they can be tested without changing
 // upstream React navigation. They do NOT expose the admin session to viewers.
 func (a *App) handleExternalIMAPShareAdminPage(w http.ResponseWriter, r *http.Request) {
 	shareHTMLHeaders(w)
+	html := externalIMAPShareAdminHTML
+	if r.URL.Query().Get("embed") == "1" {
+		// The Lite owner sidebar embeds the manager within the same origin.
+		html = strings.Replace(html, "<body>", `<body class="embedded">`, 1)
+	}
 	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(externalIMAPShareAdminHTML))
+	_, _ = w.Write([]byte(html))
 }
 
 func (a *App) handleExternalIMAPSharePage(w http.ResponseWriter, r *http.Request) {
@@ -78,6 +86,10 @@ button.danger:hover{background:#ffeaea}
  #newLink .actions{display:flex}#shares{padding:0 17px 15px}
 }
 
+.embedded .topbar{display:none}
+.embedded .workspace{max-width:none;padding:24px 22px 28px}
+.embedded .footer{margin-bottom:0}
+@media(max-width:580px){.embedded .workspace{padding:16px 12px 22px}}
 /* LanQin's default light theme: neutral surface, monochrome actions and zinc borders. */
 :root{color:#18181b;background:#fafafa}
 body{background:#fafafa;color:#18181b}
