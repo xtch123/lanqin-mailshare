@@ -10,6 +10,20 @@ import (
 	"time"
 )
 
+func TestExternalIMAPShareURLUsesIndependentPublicBase(t *testing.T) {
+	a := &App{cfg: Config{
+		PublicBaseURL: "http://localhost:18090",
+		ExternalIMAPShareBaseURL: "https://share.example.com/",
+	}}
+	if got, want := a.externalShareURL("test-token"), "https://share.example.com/api/public/shared-inbox#test-token"; got != want {
+		t.Fatalf("public share URL: got %q, want %q", got, want)
+	}
+	a.cfg.ExternalIMAPShareBaseURL = ""
+	if got, want := a.externalShareURL("test-token"), "http://localhost:18090/api/public/shared-inbox#test-token"; got != want {
+		t.Fatalf("legacy fallback URL: got %q, want %q", got, want)
+	}
+}
+
 func TestExternalIMAPShareTokenAndTimeWindows(t *testing.T) {
 	a, digestA, err := newExternalIMAPShareToken()
 	if err != nil {
