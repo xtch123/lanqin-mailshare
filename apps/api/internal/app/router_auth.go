@@ -104,6 +104,8 @@ func (a *App) Router() http.Handler {
 		r.With(a.requireAuth, a.requirePermission(PermissionMailOrganize)).Post("/me/cleanup", a.handleMailCleanup)
 		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Get("/me/external-imap-shares", a.handleListExternalIMAPShares)
 		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Post("/me/external-imap-shares", a.handleCreateExternalIMAPShare)
+		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Get("/me/external-imap-shares/{id}/link", a.handleGetExternalIMAPShareLink)
+		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Post("/me/external-imap-shares/{id}/rotate", a.handleRotateExternalIMAPShareLink)
 		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Delete("/me/external-imap-shares/{id}", a.handleRevokeExternalIMAPShare)
 		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Get("/me/external-imap-share-panel", a.handleExternalIMAPShareAdminPage)
 		r.With(a.requireAuth, a.requirePermission(PermissionMailAccess), a.requireExternalIMAPEnabled).Get("/me/external-imap-share-panel/app.js", a.handleExternalIMAPShareAdminJS)
