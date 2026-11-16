@@ -5435,6 +5435,7 @@ function AccountHeader({
   darkMode,
   onToggleTheme,
   onSettings,
+  showSettings = true,
 }: {
   collapsed: boolean
   name: string
@@ -5442,6 +5443,7 @@ function AccountHeader({
   darkMode: boolean
   onToggleTheme: () => void
   onSettings: () => void
+  showSettings?: boolean
 }) {
   useUiLanguage()
 
@@ -5480,15 +5482,17 @@ function AccountHeader({
           {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
         <LanguageSelector />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-8 rounded-md text-muted-foreground"
-          onClick={onSettings}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
+        {showSettings && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-8 rounded-md text-muted-foreground"
+            onClick={onSettings}
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   )
