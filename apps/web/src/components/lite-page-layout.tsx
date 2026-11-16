@@ -17,7 +17,8 @@ export function LitePageLayout({
       <main className="mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:px-7 sm:py-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="space-y-1">
-            <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
+            {/* The unified app toolbar already displays the page title. */}
+            <h1 className="sr-only">{title}</h1>
             {description && <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>}
           </div>
           {action}
