@@ -50,12 +50,26 @@ async function loadShares(){
   $("shares").append(row)
  });
 }
+function updateCustomControls(){
+ $("customDaysWrap").hidden=$("days").value!=="custom";
+ $("customVisibleWrap").hidden=$("visible").value!=="custom";
+}
+$("days").addEventListener("change",updateCustomControls);
+$("visible").addEventListener("change",updateCustomControls);
+updateCustomControls();
 $("create").onclick=async()=>{
  $("message").textContent="";$("newLink").style.display="none";
  const accountId=$("account").value;if(!accountId){$("message").textContent="请先添加一个外部邮箱";return}
- const days=$("customDays").value.trim()===""?Number($("days").value):Number($("customDays").value);
- const visible=$("customVisible").value.trim()===""?Number($("visible").value):Number($("customVisible").value);
- if(!Number.isInteger(days)||days<0||days>3650||!Number.isInteger(visible)||visible<0||visible>525600){
+ const customDays=$("days").value==="custom";
+ const customVisible=$("visible").value==="custom";
+ const daysText=customDays?$("customDays").value.trim():$("days").value;
+ const visibleText=customVisible?$("customVisible").value.trim():$("visible").value;
+ if((customDays&&!daysText)||(customVisible&&!visibleText)){
+  $("message").textContent="请填写自定义时间";return
+ }
+ const days=Number(daysText),visible=Number(visibleText);
+ if(!Number.isInteger(days)||days<0||days>3650||
+    (customDays&&days<1)||!Number.isInteger(visible)||visible<0||visible>525600){
   $("message").textContent="自定义参数超出允许范围";return
  }
  const payload={accountId,label:$("label").value,visibilityMinutes:visible};
@@ -96,11 +110,11 @@ function dateText(value){
 }
 function showMessage(){
  mailShell.classList.add("detail-open");
- if(mobile())window.scrollTo({top:0,behavior:"instant"});
+ if(mobile())window.scrollTo({top:0,behavior:"auto"});
 }
 document.getElementById("backToList").onclick=()=>{
  mailShell.classList.remove("detail-open");
- if(mobile())window.scrollTo({top:0,behavior:"instant"});
+ if(mobile())window.scrollTo({top:0,behavior:"auto"});
 };
 async function openMail(id){
  selectedMessageId=id;
