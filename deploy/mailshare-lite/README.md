@@ -7,10 +7,11 @@ This is **an optional separate build**, not a replacement for the current
 ## Scope
 
 * Go API + external IMAP sync (INBOX first) + SQLite + local message cache.
-* Nginx with a same-origin authenticated sharing manager iframe.
-* Owner sidebar: external inboxes, IMAP account setup, sharing manager,
-  account settings. No visible SMTP, drafts, send queue, mail labels or
-  generic folder management.
+* Nginx and native React management panels, with no nested sharing iframe.
+* Unified Lite sidebar: external inboxes, IMAP account setup, share management
+  and account settings. The top settings gear is removed. All three panels
+  use the same card layout and Chinese (simplified/traditional) and English
+  language controls. No SMTP, drafts, send queue, mail labels or quotas.
 * Public guest inbox retains read-only token access and five-second
   foreground polling. No Postfix, Dovecot, Rspamd, DKIM daemon, Supervisor,
   database clients or SMTP listeners.
@@ -33,7 +34,7 @@ cd /opt/lanqin-mailshare-lite
 docker compose up -d
 curl -fsS --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors http://127.0.0.1:18090/readyz
 docker stats --no-stream lanqin-mailshare-dev lanqin-mailshare-lite
-docker image ls lanqin-mailshare:dev-arm64 lanqin-mailshare:lite-arm64
+docker image ls --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}' | grep -E 'REPOSITORY|lanqin-mailshare'
 ```
 
 **This creates a separate copied snapshot of the development SQLite DB**
@@ -52,8 +53,11 @@ share `http://localhost:18090` with friends: it is a local test address.
 ssh -i "C:\Users\xtch1\Desktop\圣何塞\vps秘钥\ssh-key-2026-10-16.key" -o ExitOnForwardFailure=yes -N -L 127.0.0.1:18090:127.0.0.1:18090 ubuntu@64.181.233.181
 ```
 
-Test `http://localhost:18090` and `http://localhost:18090/?view=shares`
-on desktop and mobile-width browser emulation. Sharing pages and synced
+Test `http://localhost:18090` with `/?view=accounts`, `/?view=shares`,
+and `/?view=settings` on desktop and mobile. The Lite sidebar should remain
+consistent, and language switches must change all three panels immediately.
+Check share creation, copy, rotate, revoke and deletion, as well as account
+profile edits, password changes and logout. Sharing pages and synced
 mail must remain scoped to one external IMAP account; revoked links fail
 authorization. The source dev instance is **not restarted**.
 
