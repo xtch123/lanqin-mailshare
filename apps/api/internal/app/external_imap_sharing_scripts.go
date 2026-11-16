@@ -27,29 +27,93 @@ const api=async(path,opt={})=>{const r=await fetch("/api"+path,Object.assign({cr
 let lastLink="";
 function showError(e){$("message").textContent=e.message||String(e)}
 async function loadAccounts(){
-  const data=await api("/me/external-imap-accounts");
-  $("account").replaceChildren();
-  (data.items||[]).filter(a=>a.enabled&&a.storageMode==="local").forEach(a=>{
-    const o=document.createElement("option");o.value=a.id;o.textContent=(a.name||a.username)+" ("+a.username+")";$("account").append(o)
-  });
-  if(!$("account").options.length)$("message").textContent="暂无已启用且同步到本地的外部邮箱";
+ const data=await api("/me/external-imap-accounts");
+ const accounts=data.items||[];
+ $("account").replaceChildren();
+ const filter=$("shareFilter"),selected=filter.value;
+ filter.replaceChildren();
+ const all=document.createElement("option");all.value="";all.textContent="全部外部邮箱";filter.append(all);
+ accounts.forEach(a=>{
+  const text=(a.name||a.username)+" ("+a.username+")";
+  const option=document.createElement("option");option.value=a.id;option.textContent=text;
+  filter.append(option);
+  if(a.enabled&&a.storageMode==="local"){
+   const createOption=document.createElement("option");
+   createOption.value=a.id;createOption.textContent=text;$("account").append(createOption)
+  }
+ });
+ if([...filter.options].some(o=>o.value===selected))filter.value=selected;
+ if(!$("account").options.length)$("message").textContent="暂无已启用且同步到本地的外部邮箱";
+}
+function showRecoveredLink(url){
+ lastLink=url;
+ $("linkText").textContent=url;
+ $("preview").href=url;
+ $("newLink").style.display="block";
+}
+function shareStatus(s){
+ if(s.revokedAt)return "已撤销";
+ if(s.expiresAt&&new Date(s.expiresAt)<=new Date())return "已过期";
+ return "有效";
+}
+function humanVisibility(minutes){
+ if(minutes===0)return "全部已同步邮件";
+ if(minutes%1440===0)return "最近 "+(minutes/1440)+" 天";
+ if(minutes%60===0)return "最近 "+(minutes/60)+" 小时";
+ return "最近 "+minutes+" 分钟";
 }
 async function loadShares(){
- const result=await api("/me/external-imap-shares");
+ const accountId=$("shareFilter").value;
+ const path="/me/external-imap-shares"+(accountId?"?accountId="+encodeURIComponent(accountId):"");
+ const result=await api(path);
  $("shares").replaceChildren();
- if(!(result.items||[]).length){$("shares").textContent="尚无共享链接";return}
+ if(!(result.items||[]).length){
+  $("shares").textContent=accountId?"这个邮箱还没有共享记录":"尚无共享链接";return
+ }
  result.items.forEach(s=>{
   const row=document.createElement("div");row.className="item";
-  const d=document.createElement("div"),t=document.createElement("b"),sub=document.createElement("small");
-  t.textContent=s.label||s.accountId;
-  const status=s.revokedAt?"已撤销":(s.expiresAt&&new Date(s.expiresAt)<new Date()?"已过期":"有效");
-  sub.textContent=status+" · 历史范围 "+(s.visibilityMinutes===0?"全部邮件":s.visibilityMinutes+" 分钟")+" · 过期 "+(s.expiresAt?new Date(s.expiresAt).toLocaleString():"永久")+" · "+s.accountId;
-  d.append(t,sub);row.append(d);
-  if(status==="有效"){const b=document.createElement("button");b.className="danger";b.textContent="撤销";
-    b.onclick=async()=>{if(!confirm("确认撤销？该车友的链接将立即失效。"))return;try{await api("/me/external-imap-shares/"+encodeURIComponent(s.id),{method:"DELETE"});await loadShares()}catch(e){showError(e)}};row.append(b)}
+  const info=document.createElement("div");
+  const name=document.createElement("span");name.className="share-account";
+  name.textContent=s.accountName||s.accountEmail||s.accountId;
+  const address=document.createElement("span");address.className="share-address";
+  address.textContent=s.accountEmail||s.accountId;
+  const note=document.createElement("span");note.className="share-label";
+  note.textContent="车友："+(s.label||"未命名");
+  const details=document.createElement("small");
+  const status=shareStatus(s);
+  details.textContent=status+" · "+humanVisibility(s.visibilityMinutes)+" · "+(s.expiresAt?"到期 "+new Date(s.expiresAt).toLocaleString("zh-CN"):"永久有效");
+  info.append(name,address,note,details);
+  row.append(info);
+  if(status==="有效"){
+   const buttons=document.createElement("div");buttons.className="share-actions";
+   const copy=document.createElement("button");copy.className="secondary";
+   copy.textContent=s.canCopy?"复制链接":"重置链接";
+   copy.onclick=async()=>{
+    copy.disabled=true;
+    try{
+     if(!s.canCopy&&!confirm("这条旧版共享链接无法恢复。重置后旧链接立即失效，确定继续？"))return;
+     const path="/me/external-imap-shares/"+encodeURIComponent(s.id);
+     const v=await api(s.canCopy?path+"/link":path+"/rotate",s.canCopy?{}:{method:"POST"});
+     showRecoveredLink(v.url);
+     try{await navigator.clipboard.writeText(v.url);copy.textContent="已复制"}
+     catch(e){$("message").textContent="链接已显示在左侧，可手动复制"}
+     if(!s.canCopy)await loadShares();
+    }catch(e){showError(e)}
+    finally{copy.disabled=false}
+   };
+   const revoke=document.createElement("button");revoke.className="danger";revoke.textContent="撤销";
+   revoke.onclick=async()=>{
+    if(!confirm("确认撤销？该车友的链接将立即失效。"))return;
+    revoke.disabled=true;
+    try{await api("/me/external-imap-shares/"+encodeURIComponent(s.id),{method:"DELETE"});await loadShares()}
+    catch(e){showError(e);revoke.disabled=false}
+   };
+   buttons.append(copy,revoke);row.append(buttons)
+  }
   $("shares").append(row)
  });
 }
+$("shareFilter").addEventListener("change",()=>loadShares().catch(showError));
 function updateCustomControls(){
  $("customDaysWrap").hidden=$("days").value!=="custom";
  $("customVisibleWrap").hidden=$("visible").value!=="custom";
@@ -76,7 +140,7 @@ $("create").onclick=async()=>{
  if(days)payload.expiresAt=new Date(Date.now()+days*86400000).toISOString();
  $("create").disabled=true;
  try{const v=await api("/me/external-imap-shares",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
-    lastLink=v.url;$("linkText").textContent=lastLink;$("preview").href=lastLink;$("newLink").style.display="block";
+    showRecoveredLink(v.url);
     await loadShares()}
  catch(e){showError(e)}finally{$("create").disabled=false}
 };
