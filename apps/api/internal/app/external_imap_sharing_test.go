@@ -210,3 +210,28 @@ func TestExternalIMAPShareMobileLayouts(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalIMAPShareMatchesLanQinThemeAndKeepsActionsOnOneLine(t *testing.T) {
+	a := newTestApp(t)
+	admin := httptest.NewRecorder()
+	a.handleExternalIMAPShareAdminPage(admin, httptest.NewRequest(http.MethodGet, "/api/me/external-imap-share-panel", nil))
+	html := admin.Body.String()
+	for _, required := range []string{
+		"background:#18181b",
+		"border-color:#e4e4e7",
+		"white-space:nowrap",
+		"flex:0 0 auto",
+		"button.danger",
+	} {
+		if !strings.Contains(html, required) {
+			t.Fatalf("share manager theme or revoke layout requirement missing: %s", required)
+		}
+	}
+	viewer := httptest.NewRecorder()
+	a.handleExternalIMAPSharePage(viewer, httptest.NewRequest(http.MethodGet, "/api/public/shared-inbox", nil))
+	for _, required := range []string{"background:#18181b", "background:#fafafa", "mail-shell.detail-open"} {
+		if !strings.Contains(viewer.Body.String(), required) {
+			t.Fatalf("shared inbox theme requirement missing: %s", required)
+		}
+	}
+}
