@@ -79,7 +79,9 @@ func TestExternalIMAPShareOwnerCanCopyFilterAndRotate(t *testing.T) {
 		listing.Items[0].ID != shareA.ID {
 		t.Fatalf("mailbox filtering or labels failed: %+v", listing.Items)
 	}
-	var copied struct{ URL string `json:"url"` }
+	var copied struct {
+		URL string `json:"url"`
+	}
 	if code := admin.do("GET", "/api/me/external-imap-shares/"+shareA.ID+"/link", nil, &copied); code != http.StatusOK || copied.URL != shareA.URL {
 		t.Fatalf("recopy failed: code=%d same=%v", code, copied.URL == shareA.URL)
 	}
@@ -106,7 +108,9 @@ func TestExternalIMAPShareOwnerCanCopyFilterAndRotate(t *testing.T) {
 	if code := admin.do("GET", "/api/me/external-imap-shares/legacy-share/link", nil, nil); code != http.StatusConflict {
 		t.Fatalf("legacy token recovery status %d, want 409", code)
 	}
-	var rotated struct{ URL string `json:"url"` }
+	var rotated struct {
+		URL string `json:"url"`
+	}
 	if code := admin.do("POST", "/api/me/external-imap-shares/legacy-share/rotate", nil, &rotated); code != http.StatusOK {
 		t.Fatalf("rotate legacy share status %d", code)
 	}
