@@ -29,6 +29,8 @@ const maxShareVisibilityMinutes int64 = 525600 // one year; zero means all retai
 type externalIMAPShareLink struct {
 	ID                string  `json:"id"`
 	AccountID         string  `json:"accountId"`
+	AccountName       string  `json:"accountName"`
+	AccountEmail      string  `json:"accountEmail"`
 	Label             string  `json:"label"`
 	VisibilityMinutes int64   `json:"visibilityMinutes"`
 	CreatedAt         string  `json:"createdAt"`
@@ -154,7 +156,7 @@ func (a *App) handleListExternalIMAPShares(w http.ResponseWriter, r *http.Reques
 			return
 		}
 	}
-	query := `SELECT s.id,s.account_id,s.label,s.visibility_minutes,s.created_at,s.expires_at,s.revoked_at,s.last_accessed_at
+	query := `SELECT s.id,s.account_id,a.name,a.username,s.label,s.visibility_minutes,s.created_at,s.expires_at,s.revoked_at,s.last_accessed_at
 		FROM external_imap_share_links s JOIN external_imap_accounts a ON a.id=s.account_id
 		WHERE a.user_id=? AND s.owner_user_id=a.user_id`
 	args := []any{currentUser(r).ID}
@@ -173,7 +175,7 @@ func (a *App) handleListExternalIMAPShares(w http.ResponseWriter, r *http.Reques
 	for rows.Next() {
 		var item externalIMAPShareLink
 		var expiry, revoked, accessed sql.NullString
-		if err := rows.Scan(&item.ID, &item.AccountID, &item.Label, &item.VisibilityMinutes, &item.CreatedAt, &expiry, &revoked, &accessed); err != nil {
+		if err := rows.Scan(&item.ID, &item.AccountID, &item.AccountName, &item.AccountEmail, &item.Label, &item.VisibilityMinutes, &item.CreatedAt, &expiry, &revoked, &accessed); err != nil {
 			respondError(w, http.StatusInternalServerError, "failed to read shares")
 			return
 		}
