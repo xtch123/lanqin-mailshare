@@ -172,3 +172,18 @@ func TestExternalIMAPShareLegacyTableMigrationPreservesRows(t *testing.T) {
 		t.Fatalf("legacy row modified: id=%s label=%s encrypted=%v", id, label, ciphertext)
 	}
 }
+
+func TestExternalIMAPShareListDoesNotRenderInternalIDs(t *testing.T) {
+	a := newTestApp(t)
+	response := httptest.NewRecorder()
+	a.handleExternalIMAPShareAdminJS(response, httptest.NewRequest(http.MethodGet, "/api/me/external-imap-share-panel/app.js", nil))
+	body := response.Body.String()
+	for _, fragment := range []string{
+		"name.textContent=s.accountName||s.accountEmail||s.accountId",
+		"address.textContent=s.accountEmail||s.accountId",
+	} {
+		if strings.Contains(body, fragment) {
+			t.Fatalf("internal external IMAP account ID must not be shown in UI: %s", fragment)
+		}
+	}
+}
