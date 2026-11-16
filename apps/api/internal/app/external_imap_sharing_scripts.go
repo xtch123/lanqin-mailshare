@@ -154,6 +154,7 @@ const list=document.getElementById("list"),detail=document.getElementById("detai
 const err=document.getElementById("error"),subtitle=document.getElementById("subtitle");
 const mailShell=document.getElementById("mailShell"),mailCount=document.getElementById("mailCount");
 let selectedMessageId="",currentAccountName="";
+let firstPageSnapshot=null,refreshInFlight=false;
 const mobile=()=>window.matchMedia("(max-width: 720px)").matches;
 
 async function get(path){
@@ -232,6 +233,11 @@ async function loadPage(page,append){
  const messages=data.items||[];
  subtitle.textContent=currentAccountName+" · 只读访问";
  if(!append){
+  // Poll often, but only repaint the list when something actually changed.
+  // This preserves scroll position and prevents flicker every five seconds.
+  const snapshot=JSON.stringify([messages,data.nextPage,currentAccountName]);
+  if(snapshot===firstPageSnapshot)return;
+  firstPageSnapshot=snapshot;
   list.replaceChildren();
   err.textContent="";
   if(!messages.length){
@@ -266,19 +272,23 @@ async function loadPage(page,append){
  }
 }
 async function refresh(){
+ if(refreshInFlight)return;
  if(!token){
   subtitle.textContent="未提供访问凭证";
   err.textContent="共享链接缺少访问令牌，请使用管理员提供的完整链接。";
   list.replaceChildren(emptyState("无法访问","请重新打开完整的共享链接。"));
   return;
  }
+ refreshInFlight=true;
  try{await loadPage(0,false)}
  catch(e){
+  firstPageSnapshot=null;
   err.textContent=e.message;
   subtitle.textContent="无法访问共享收件箱";
   list.replaceChildren(emptyState("无法读取邮件",e.message));
- }
+ }finally{refreshInFlight=false}
 }
 document.getElementById("refresh").onclick=refresh;
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)refresh()});
 refresh();
-setInterval(refresh,30000);`
+setInterval(()=>{if(!document.hidden)refresh()},5000);`
