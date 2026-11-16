@@ -782,37 +782,8 @@ export function ProfilePage() {
         />
       </SidebarHeader>
       <SidebarContent>
-        {MAILSHARE_LITE && (
-          <SidebarGroup>
-            {!sidebarCollapsed && <SidebarGroupLabel>邮箱共享</SidebarGroupLabel>}
-            <SidebarGroupContent>
-              <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    title="外部邮箱收件箱"
-                    className={cn(sidebarCollapsed && "justify-center px-0")}
-                    onClick={() => navigate("/")}
-                  >
-                    <Mail className="h-4 w-4" />
-                    {!sidebarCollapsed && <span>外部邮箱收件箱</span>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    title="共享管理"
-                    className={cn(sidebarCollapsed && "justify-center px-0")}
-                    onClick={() => navigate("/?view=shares")}
-                  >
-                    <Share2 className="h-4 w-4" />
-                    {!sidebarCollapsed && <span>共享管理</span>}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
         <SidebarGroup>
-          {!sidebarCollapsed && <SidebarGroupLabel>{MAILSHARE_LITE ? "设置" : uiText("个人中心")}</SidebarGroupLabel>}
+          {!sidebarCollapsed && <SidebarGroupLabel>{uiText("个人中心")}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {visibleTabKeys.map((key) => (
