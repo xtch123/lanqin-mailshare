@@ -38,6 +38,8 @@ import type {
   BlockedSender,
   MailStats,
   ExternalImapAccount,
+  ExternalImapShare,
+  ExternalImapShareCreate,
   ExternalImapAccountPayload,
   ExternalImapFolder,
   ExternalImapOAuthProvider,
@@ -314,6 +316,22 @@ export const api = {
   notifications: () => request<ListResponse<UserNotification>>("/api/me/notifications"),
   readNotification: (id: string) =>
     request<{ ok: boolean }>(`/api/me/notifications/${id}/read`, { method: "POST" }),
+  externalImapShares: (accountId?: string) =>
+    request<ListResponse<ExternalImapShare>>(
+      `/api/me/external-imap-shares${accountId ? `?accountId=${encodeURIComponent(accountId)}` : ""}`
+    ),
+  createExternalImapShare: (payload: ExternalImapShareCreate) =>
+    request<{ id: string; url: string }>("/api/me/external-imap-shares", {
+      method: "POST", body: JSON.stringify(payload),
+    }),
+  externalImapShareLink: (id: string) =>
+    request<{ url: string }>(`/api/me/external-imap-shares/${encodeURIComponent(id)}/link`),
+  rotateExternalImapShare: (id: string) =>
+    request<{ url: string }>(`/api/me/external-imap-shares/${encodeURIComponent(id)}/rotate`, { method: "POST" }),
+  revokeExternalImapShare: (id: string) =>
+    request<{ ok: boolean }>(`/api/me/external-imap-shares/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  deleteRevokedExternalImapShare: (id: string) =>
+    request<{ ok: boolean }>(`/api/me/external-imap-shares/${encodeURIComponent(id)}/record`, { method: "DELETE" }),
   externalImapAccounts: (mailboxId?: string) =>
     request<ListResponse<ExternalImapAccount>>(
       `/api/me/external-imap-accounts${mailboxId ? `?mailboxId=${encodeURIComponent(mailboxId)}` : ""}`
