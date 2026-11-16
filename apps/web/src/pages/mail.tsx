@@ -612,6 +612,7 @@ export function MailPage() {
       canReadMail &&
       mailView !== "shareManager" &&
       mailView !== "accountManager" &&
+      mailView !== "accountSettings" &&
       !isPlainInboxView &&
       (!restrictedSharedMailbox || !!folders.data?.items.some((item) => item.name === "Inbox")),
     refetchInterval: mailRefreshInterval,
@@ -646,6 +647,7 @@ export function MailPage() {
       mailView !== "external" &&
       mailView !== "shareManager" &&
       mailView !== "accountManager" &&
+      mailView !== "accountSettings" &&
       (mailView !== "label" || !!selectedLabelId),
   })
   const externalMessages = useInfiniteQuery({
@@ -2450,12 +2452,12 @@ export function MailPage() {
   ) : MAILSHARE_LITE && !externalMailAccounts.isLoading && externalAccountItems.length === 0 ? (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
       <Inbox className="h-10 w-10 text-muted-foreground" />
-      <div className="text-lg font-medium">还没有外部 IMAP 邮箱</div>
-      <p className="max-w-md text-sm text-muted-foreground">先接入 seek.li 邮箱，再创建车友共享链接。</p>
+      <div className="text-lg font-medium">{uiText("还没有外部 IMAP 邮箱")}</div>
+      <p className="max-w-md text-sm text-muted-foreground">{uiText("先接入 seek.li 邮箱，再创建车友共享链接。")}</p>
       <Button onClick={() => {
         setMailView("accountManager")
         setURLParams({ view: "accounts" })
-      }}>添加外部邮箱</Button>
+      }}>{uiText("添加外部邮箱")}</Button>
     </div>
   ) : !mailboxList.isLoading && !hasMailboxes ? (
     <NoMailboxState onOpenSettings={openSettings} />
