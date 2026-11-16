@@ -12,21 +12,20 @@ import (
 
 func TestExternalIMAPShareLiteOnlyStartsEssentialWorkers(t *testing.T) {
 	dir := newTestDir(t)
-	cfg := Config{
-		Addr:              ":0",
-		DBPath:            filepath.Join(dir, "lanqin.db"),
-		DataDir:           filepath.Join(dir, "data"),
-		CookieName:        "lanqin_lite_test",
-		SessionTTLHours:   24,
-		AdminEmail:        "admin@lanqin.local",
-		AdminPassword:     "ChangeMe123!",
-		PublicHostname:    "mail.example.test",
-		PublicBaseURL:     "http://localhost:18090",
-		AllowInsecureHTTP: true,
-		ExternalIMAPEnabled: true,
-		ExternalIMAPSecretKey: "lite-test-secret-only",
-		MailShareLite:     true,
-	}
+	cfg := Config{}
+	cfg.Addr = ":0"
+	cfg.DBPath = filepath.Join(dir, "lanqin.db")
+	cfg.DataDir = filepath.Join(dir, "data")
+	cfg.CookieName = "lanqin_lite_test"
+	cfg.SessionTTLHours = 24
+	cfg.AdminEmail = "admin@lanqin.local"
+	cfg.AdminPassword = "ChangeMe123!"
+	cfg.PublicHostname = "mail.example.test"
+	cfg.PublicBaseURL = "http://localhost:18090"
+	cfg.AllowInsecureHTTP = true
+	cfg.ExternalIMAPEnabled = true
+	cfg.ExternalIMAPSecretKey = "lite-test-secret-only"
+	cfg.MailShareLite = true
 	a, err := New(cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatal(err)
