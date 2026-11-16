@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"database/sql"
 	"crypto/sha256"
 	"encoding/hex"
 	"net/http"
@@ -128,5 +129,46 @@ func TestExternalIMAPShareOwnerCanCopyFilterAndRotate(t *testing.T) {
 	}
 	if code := admin.do("GET", "/api/me/external-imap-shares/"+shareA.ID+"/link", nil, nil); code != http.StatusNotFound {
 		t.Fatalf("revoked token should not be copied: %d", code)
+	}
+}
+
+func TestExternalIMAPShareLegacyTableMigrationPreservesRows(t *testing.T) {
+	a := newTestApp(t)
+	if _, err := a.db.Exec(`DROP TABLE external_imap_share_links`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.db.Exec(`CREATE TABLE external_imap_share_links (
+		id VARCHAR(64) PRIMARY KEY,
+		account_id VARCHAR(64) NOT NULL,
+		owner_user_id VARCHAR(64) NOT NULL,
+		label VARCHAR(128) NOT NULL DEFAULT '',
+		token_sha256 CHAR(64) NOT NULL UNIQUE,
+		visibility_minutes BIGINT NOT NULL DEFAULT 1440,
+		created_at VARCHAR(40) NOT NULL,
+		expires_at VARCHAR(40),
+		revoked_at VARCHAR(40),
+		last_accessed_at VARCHAR(40)
+	)`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := a.db.Exec(`INSERT INTO external_imap_share_links
+		(id,account_id,owner_user_id,label,token_sha256,created_at)
+		VALUES(?,?,?,?,?,?)`, "old-link", "old-account", "old-user", "retained", strings.Repeat("a", 64), "2026-01-01T00:00:00Z")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for n := 0; n < 2; n++ {
+		if err := a.migrateExternalIMAPShares(); err != nil {
+			t.Fatalf("migration attempt %d: %v", n+1, err)
+		}
+	}
+	var id, label string
+	var ciphertext sql.NullString
+	if err := a.db.QueryRow(`SELECT id,label,token_ciphertext FROM external_imap_share_links WHERE id='old-link'`).
+		Scan(&id, &label, &ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	if id != "old-link" || label != "retained" || ciphertext.Valid {
+		t.Fatalf("legacy row modified: id=%s label=%s encrypted=%v", id, label, ciphertext)
 	}
 }
