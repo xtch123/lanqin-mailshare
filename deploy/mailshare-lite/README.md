@@ -1,88 +1,146 @@
-# LanQin MailShare Lite — isolated developer smoke test
+# LanQin MailShare Lite：部署与运维指南
 
-This is **an optional separate build**, not a replacement for the current
-`lanqin-mailshare-dev` on `127.0.0.1:18089` and not the original
-`lanqin-test` on `127.0.0.1:18088`.
+[← 项目首页（简体中文）](../../README.md) | [English overview](../../README.en.md)
 
-## Scope
+> 适用于 `lite` 分支的源码自建部署。以下公网共享方式是**示例防护架构**，不是对所有版本或环境的安全审计。**不要直接公开完整管理/API 服务。**
 
-* Go API + external IMAP sync (INBOX first) + SQLite + local message cache.
-* Nginx and native React management panels, with no nested sharing iframe.
-* Unified Lite sidebar: external inboxes, IMAP account setup, share management
-  and account settings. The top settings gear is removed. All three panels
-  use the same card layout and Chinese (simplified/traditional) and English
-  language controls. No SMTP, drafts, send queue, mail labels or quotas.
-* Public guest inbox retains read-only token access and five-second
-  foreground polling. No Postfix, Dovecot, Rspamd, DKIM daemon, Supervisor,
-  database clients or SMTP listeners.
-* `LANQIN_MAILSHARE_LITE=true` disables outgoing, local-delivery,
-  notifications and native backup workers **in the Go app**. It does not
-  remove the upstream API's entire send-route implementation; avoid making
-  this service publicly reachable until the Lite-only server routes and
-  security are independently reviewed.
+## 1. 部署结构
 
-## First build and isolated local test (OCI ARM64)
+```text
+管理者 -- SSH 本地转发 --> 127.0.0.1:18090 --> lanqin-mailshare-lite
+访客 -- HTTPS --> Cloudflare Tunnel --> 127.0.0.1:18091
+                                        mailshare-public-gateway (Nginx)
+                                               仅允许共享 GET/HEAD
+                                                     |
+                                                     v
+                                            127.0.0.1:18090
+```
 
-From repository checkout:
+- `18090`：完整 Lite 界面，仅监听 OCI 本机回环地址；不要直接暴露到公网。
+- `18091`：可选的独立共享网关，也仅监听本机回环地址。
+- `cloudflared` 可复用已有的 Tunnel；它访问网关，不直接访问完整 Lite 后台。
+- 共享页面固定路径：`/api/public/shared-inbox`；完整链接末尾的 `#<访问令牌>` 是访问凭证。
+
+## 2. 构建和本地部署
+
+从 `lite` 分支构建。请根据自己的平台调整镜像标签：
 
 ```bash
-cd /opt/lanqin-mailshare-dev
-git pull --ff-only
+git clone https://github.com/xtch123/lanqin-mailshare.git
+cd lanqin-mailshare
+git switch lite
 docker build -f deploy/mailshare-lite/Dockerfile -t lanqin-mailshare:lite-arm64 .
-python3 deploy/mailshare-lite/prepare.py --source /opt/lanqin-mailshare-test --target /opt/lanqin-mailshare-lite
-cd /opt/lanqin-mailshare-lite
-docker compose up -d
-curl -fsS --retry 20 --retry-delay 2 --retry-connrefused --retry-all-errors http://127.0.0.1:18090/readyz
-docker stats --no-stream lanqin-mailshare-dev lanqin-mailshare-lite
-docker image ls --format 'table {{.Repository}}\t{{.Tag}}\t{{.Size}}' | grep -E 'REPOSITORY|lanqin-mailshare'
 ```
 
-**This creates a separate copied snapshot of the development SQLite DB**
-using Python's online backup interface (not a raw copy of a live WAL).
-It also copies local attachment/mail files and the dev test `.env` so the
-accounts can be decrypted by the same existing key. Keep the Lite test
-workspace private; both instances contain sensitive mailbox contents and
-account credentials.
+[Compose 示例](./compose.yaml) 使用镜像 `lanqin-mailshare:lite-arm64`。将它复制到独立的私有运行目录，在该目录创建 `.env`、`data/`、`mail/`，再执行 `docker compose up -d`。**不要将私有数据目录放在 Git 仓库内提交。**
 
-The Lite workspace uses a distinct `/opt/lanqin-mailshare-lite` data
-directory and binds HTTP to **127.0.0.1:18090 only**. Access through a
-dedicated SSH local tunnel (or localhost within the OCI server). Do NOT
-share `http://localhost:18090` with friends: it is a local test address.
+`.env` 至少需要根据实际账号设置管理员凭据与 `LANQIN_EXTERNAL_IMAP_SECRET_KEY` 等必要密钥；密钥必须安全生成并长期保存，**不要随意更换已有系统的 IMAP 加密密钥**，否则已保存的账号凭据可能无法解密。Compose 示例已启用 Lite、SQLite、外部 IMAP 同步，并将完整应用映射为 `127.0.0.1:18090:80`。
 
-```powershell
-ssh -i "C:\Users\xtch1\Desktop\圣何塞\vps秘钥\ssh-key-2026-10-16.key" -o ExitOnForwardFailure=yes -N -L 127.0.0.1:18090:127.0.0.1:18090 ubuntu@64.181.233.181
+确认服务准备就绪：
+
+```bash
+docker compose ps && curl -fsS http://127.0.0.1:18090/readyz
 ```
 
-Test `http://localhost:18090` with `/?view=accounts`, `/?view=shares`,
-and `/?view=settings` on desktop and mobile. The Lite sidebar should remain
-consistent, and language switches must change all three panels immediately.
-Check share creation, copy, rotate, revoke and deletion, as well as account
-profile edits, password changes and logout. Sharing pages and synced
-mail must remain scoped to one external IMAP account; revoked links fail
-authorization. The source dev instance is **not restarted**.
+管理员可通过 SSH 本地端口转发连接服务器上的 `127.0.0.1:18090`，在本地浏览器打开 `http://localhost:18090`。切勿让终端输出或 README 包含真实服务器私钥路径、密码、数据库或完整共享 Token。
 
-After creating the clone, both test instances can independently poll
-the same seek.li account. Avoid high-volume or destructive testing:
-read-state sync and any remotely mutating operations require extra care.
+## 3. 公网共享地址与网关
 
-## Deletion and existing local-cache folders
+**先让本地 Lite 正常同步邮件，再考虑公开只读共享。**
 
-External IMAP sync creates internal storage folders named
-`External <account-key> <folder-hash>`. Deleting the external account
-removes its connection configuration but does not automatically erase
-local messages. The full web UI filters these technical folders out of
-the regular mailbox sidebar. The Lite sidebar displays only actual
-connected external accounts. This is deliberately non-destructive.
+在运行目录的私有 `.env` 中新增（替换为你自己的域名）：
 
-## Security and release limits
+```dotenv
+LANQIN_EXTERNAL_IMAP_SHARE_BASE_URL=https://share.example.com
+```
 
-Do not expose this test image to a public Cloudflare Tunnel before
-replacing `LANQIN_ALLOW_INSECURE_HTTP=true` with a reviewed TLS setup,
-reviewing remaining owner routes (including sending/deleting), confirming
-backups and cross-account isolation, and completing a real-phone test.
-Also ensure any future public URL is set through
-`LANQIN_PUBLIC_BASE_URL`; localhost links are not externally reachable.
+这是**独立的共享链接基础地址**。它不要求改变现有的 `LANQIN_PUBLIC_BASE_URL=http://localhost:18090`。修改 `.env` 后需要重新创建 Lite 容器，环境变量才会生效。
 
-Avoid checking in `.env`, database snapshots, private keys or the
-local `mail` and `data` directories. Do not delete the original
-development or LanQin containers during evaluation.
+示例 Nginx 网关配置（`default.conf`），适用于 **`network_mode: host` 的独立网关容器**：
+
+```nginx
+server {
+    listen 127.0.0.1:18091;
+    server_name _;
+    server_tokens off;
+    add_header Cache-Control "no-store" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+
+    proxy_set_header Host $host;
+    proxy_set_header True-Client-IP "";
+    proxy_set_header X-Forwarded-For "";
+
+    if ($request_method !~ ^(GET|HEAD)$) { return 405; }
+
+    location = /api/public/shared-inbox { proxy_pass http://127.0.0.1:18090; }
+    location = /api/public/shared-inbox/app.js { proxy_pass http://127.0.0.1:18090; }
+    location = /api/public/shared-inbox/messages { proxy_pass http://127.0.0.1:18090; }
+    location ~ ^/api/public/shared-inbox/messages/[^/]+$ {
+        proxy_pass http://127.0.0.1:18090;
+    }
+    location ~ ^/api/public/shared-inbox/messages/[^/]+/attachments/[^/]+$ {
+        proxy_pass http://127.0.0.1:18090;
+    }
+    location / { return 404; }
+}
+```
+
+示例的网关 Compose 文件：
+
+```yaml
+services:
+  mailshare-public-gateway:
+    image: nginx:stable-alpine
+    container_name: mailshare-public-gateway
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
+    security_opt:
+      - no-new-privileges:true
+```
+
+按需增加镜像锁定、请求限速和日志保留策略。网关是额外隔离层；它不能替代服务本身的令牌验证和安全审计。
+
+## 4. Cloudflare Tunnel（本地管理）
+
+如果 Tunnel 使用**本地 `config.yml`** 管理，不要在 Cloudflare 控制台里直接修改 ingress。备份现有配置，将以下规则追加到**兜底 `http_status:404` 之前**（不要覆盖其他站点的规则）：
+
+```yaml
+ingress:
+  # 保留其他已存在的 hostname 规则
+  - hostname: share.example.com
+    service: http://127.0.0.1:18091
+  - service: http_status:404
+```
+
+验证后重启 cloudflared，并给 `share.example.com` 配置一条橙云 CNAME，指向同一个 Tunnel 的 `<tunnel-uuid>.cfargotunnel.com`。远程管理的 Tunnel 请使用与其模式相匹配的路由配置方式。
+
+访客不应经过完整 Lite 的 `18090` 入口，也无需获取管理员登录凭据。共享 Token 必须保密；Cloudflare Access 登录并非默认共享模型的必需部分。
+
+## 5. 验收清单
+
+```bash
+curl -sS -o /dev/null -w '共享页 %{http_code}\n' https://share.example.com/api/public/shared-inbox
+curl -sS -o /dev/null -w '无令牌 %{http_code}\n' https://share.example.com/api/public/shared-inbox/messages
+curl -sS -o /dev/null -w '后台 %{http_code}\n' https://share.example.com/login
+```
+
+预期为 `200`、`401`、`404`。**但这仅证明部分路径行为符合预期，不代表完整安全审计通过。**
+
+再用真实测试邮箱验证：最近收到的邮件能够导入、共享列表显示、正文与附件可读、链接可复制、失效或撤销后访问失败。访客不能发送邮件或访问管理 API。邮件正文中的第三方链接（例如 Netflix）是否能打开，取决于访客自己的网络可达性，并不由 Lite 或 Cloudflare 网关保证。
+
+## 6. IMAP 同步、备份和升级
+
+- `lite` 已修复一类**旧 UID 被搜索结果重复返回、占满 100 封同步批次**的问题，并添加测试。实际部署曾从“0 导入 / 100 跳过”恢复为导入新邮件、后续无重复跳过。
+- 同步显示 `ok` 并不等同于有新邮件成功导入。需要同时观察 `external_imap_sync_runs` 的 `imported`/`skipped`/`failed` 和本地邮件最新接收时间；不要在未诊断前手动清空 `external_imap_folder_states` 或修改 UID。
+- 其它 IMAP 提供商的 UIDVALIDITY 变更、异常 SEARCH 结果及大邮箱行为仍需进一步验证。
+- 升级前备份 `.env`、邮件附件目录，以及通过 SQLite Backup API 获得的**一致性数据库快照**；保留旧镜像，测试新镜像后再重建运行容器。数据库备份应加密保存并定期验证恢复。
+- 如果需要将服务提供给其他人，应自行完成威胁建模、接口审计、限流和长期维护；本仓库当前不是经正式安全审计的托管服务。
+
+## 历史与许可
+
+本目录旧版说明曾用于 `lanqin-mailshare-dev` 和 `lanqin-test` 的隔离试验；这些测试实例与路径已不再是当前推荐部署步骤。当前请以 `lite` 分支和独立私有运行目录为准。
+
+源项目：[LanQin996/LanQin-Email](https://github.com/LanQin996/LanQin-Email)；许可证：[GPL-3.0-only](../../LICENSE)。
