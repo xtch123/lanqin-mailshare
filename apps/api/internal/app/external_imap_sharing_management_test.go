@@ -222,4 +222,14 @@ func TestExternalIMAPShareListDoesNotRenderInternalIDs(t *testing.T) {
 			t.Fatalf("internal external IMAP account ID must not be shown in UI: %s", fragment)
 		}
 	}
+
+	for _, required := range []string{
+		`else if(status==="已撤销")`,
+		`remove.textContent="删除记录"`,
+		`+"/record",{method:"DELETE"}`,
+	} {
+		if !strings.Contains(body, required) {
+			t.Fatalf("revoked sharing entry must offer confirmed record deletion: %s", required)
+		}
+	}
 }
