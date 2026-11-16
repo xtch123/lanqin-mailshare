@@ -563,7 +563,8 @@ export function MailPage() {
     if (MAILSHARE_LITE && accounts.length > 0) {
       setSelectedExternalAccountId(accounts[0].id)
       setExternalFolder("INBOX")
-      setMailView("external")
+      // Do not unexpectedly leave account or share management after deletion.
+      if (mailView === "external" || mailView === "folder") setMailView("external")
     } else {
       setSelectedExternalAccountId("")
       if (mailView === "external") setMailView("folder")
@@ -605,6 +606,8 @@ export function MailPage() {
     enabled:
       !!activeMailboxId &&
       canReadMail &&
+      mailView !== "shareManager" &&
+      mailView !== "accountManager" &&
       !isPlainInboxView &&
       (!restrictedSharedMailbox || !!folders.data?.items.some((item) => item.name === "Inbox")),
     refetchInterval: mailRefreshInterval,
@@ -637,6 +640,8 @@ export function MailPage() {
       mailView !== "scheduled" &&
       mailView !== "sendQueue" &&
       mailView !== "external" &&
+      mailView !== "shareManager" &&
+      mailView !== "accountManager" &&
       (mailView !== "label" || !!selectedLabelId),
   })
   const externalMessages = useInfiniteQuery({
