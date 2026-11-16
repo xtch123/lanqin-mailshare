@@ -206,6 +206,13 @@ export function ProfilePage() {
   const themeMountedRef = React.useRef(false)
 
   const rawTab = params.get("tab") as Tab | null
+  React.useEffect(() => {
+    // Previous Lite links to the full mailbox administration page should
+    // return to the unified external IMAP manager instead.
+    if (MAILSHARE_LITE && rawTab === "mailboxes") {
+      navigate("/?view=accounts", { replace: true })
+    }
+  }, [navigate, rawTab])
   const user = me.data?.user
   const canAccessMail = hasPermission(user, "mail.access")
   const canReadMail = hasPermission(user, "mail.messages.read")
@@ -218,9 +225,7 @@ export function ProfilePage() {
   const canViewStats = hasPermission(user, "mail.stats.view")
   const canApplyMailbox = hasPermission(user, "mail.mailboxes.apply")
   const visibleTabKeys = tabKeys.filter((key) => {
-    if (MAILSHARE_LITE) {
-      return key === "profile" || (key === "mailboxes" && (canAccessMail || canApplyMailbox))
-    }
+    if (MAILSHARE_LITE) return key === "profile"
     if (key === "profile") return true
     if (key === "apiTokens") return true
     if (key === "mailboxes") return canAccessMail || canApplyMailbox
