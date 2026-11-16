@@ -86,11 +86,11 @@ function ExternalAccountEditor({ account, mailboxId, busy, onClose, onSave }: Ed
         </div>
         <div className="space-y-2">
           <Label htmlFor="lite-imap-user">{uiText("邮箱地址 / 用户名")}</Label>
-          <Input id="lite-imap-user" name="username" type="text" autoComplete="username" required defaultValue={account?.username || ""} placeholder="name@seek.li" />
+          <Input id="lite-imap-user" name="username" type="text" autoComplete="username" required defaultValue={account?.username || ""} placeholder={"name@seek.li"} />
         </div>
         <div className="space-y-2">
           <Label htmlFor="lite-imap-host">{uiText("IMAP 服务器")}</Label>
-          <Input id="lite-imap-host" name="host" required defaultValue={account?.host || ""} placeholder="imap.seek.li" autoComplete="off" />
+          <Input id="lite-imap-host" name="host" required defaultValue={account?.host || ""} placeholder={"imap.seek.li"} autoComplete="off" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="lite-imap-port">{uiText("端口")}</Label>
