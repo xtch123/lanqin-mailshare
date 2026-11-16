@@ -2794,7 +2794,7 @@ export function MailPage() {
                   className={cn(
                     "transition-all",
                     (refreshing || autoRefreshing) && "bg-primary/5 text-primary",
-                    MAILSHARE_LITE && mailView === "shareManager" && "hidden"
+                    hideLiteMailToolbar && "hidden"
                   )}
                   title={autoRefreshing ? uiText("自动刷新中") : uiText("刷新邮件")}
                 >
@@ -2828,7 +2828,7 @@ export function MailPage() {
                     <PencilLine className="h-4 w-4" />
                   </Button>
                 )}
-                {mailView !== "sendQueue" && mailView !== "shareManager" && (
+                {mailView !== "sendQueue" && !hideLiteMailToolbar && (
                   <div className="relative basis-full">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -2868,8 +2868,8 @@ export function MailPage() {
               <section className="flex h-full min-h-0 flex-col">
                 <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b px-5">
                   <div className="flex items-center gap-2">
-                    {MAILSHARE_LITE && mailView === "shareManager" && (
-                      <span className="font-semibold text-sm">共享管理</span>
+                    {hideLiteMailToolbar && (
+                      <span className="font-semibold text-sm">{viewTitle}</span>
                     )}
                     <Button
                       size="icon"
@@ -2879,7 +2879,7 @@ export function MailPage() {
                       className={cn(
                         "transition-all",
                         (refreshing || autoRefreshing) && "bg-primary/5 text-primary",
-                        MAILSHARE_LITE && mailView === "shareManager" && "hidden"
+                        hideLiteMailToolbar && "hidden"
                       )}
                       title={autoRefreshing ? uiText("自动刷新中") : uiText("刷新邮件")}
                     >
@@ -2887,7 +2887,7 @@ export function MailPage() {
                         className={cn("h-4 w-4", (refreshing || autoRefreshing) && "animate-spin")}
                       />
                     </Button>
-                    {!(MAILSHARE_LITE && mailView === "shareManager") && (publicSettings.data?.mailAutoRefresh || autoRefreshing) && (
+                    {!hideLiteMailToolbar && (publicSettings.data?.mailAutoRefresh || autoRefreshing) && (
                       <div className="hidden min-w-[118px] text-xs text-muted-foreground sm:block">
                         {autoRefreshing
                           ? uiText("自动刷新中...")
@@ -2903,7 +2903,7 @@ export function MailPage() {
                     )}
                     {mailView !== "scheduled" &&
                       mailView !== "sendQueue" &&
-                      mailView !== "shareManager" &&
+                      !hideLiteMailToolbar &&
                       (mailView !== "external" || externalMessagesStoredLocally) && (
                         <>
                           {canOrganizeSelectedMailbox && (
@@ -2937,7 +2937,7 @@ export function MailPage() {
                         </>
                       )}
                   </div>
-                  {mailView !== "sendQueue" && mailView !== "shareManager" && (
+                  {mailView !== "sendQueue" && !hideLiteMailToolbar && (
                     <div className="relative w-full max-w-md">
                       <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
