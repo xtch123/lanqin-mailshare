@@ -520,12 +520,26 @@ export function MailPage() {
     if (mailView === "external") setMailView("folder")
   }, [externalImapEnabled, mailView])
   React.useEffect(() => {
-    const ids = new Set((externalMailAccounts.data?.items || []).map((item) => item.id))
+    const accounts = externalMailAccounts.data?.items
+    if (!accounts) return
+    const ids = new Set(accounts.map((item) => item.id))
     setExpandedExternalAccountIds((current) => {
       const next = current.filter((id) => ids.has(id))
       return next.length === current.length ? current : next
     })
-  }, [externalMailAccounts.data?.items])
+    if (!selectedExternalAccountId || ids.has(selectedExternalAccountId)) return
+    // Deleting an external IMAP account must also clear any stale selected
+    // account and message. Never keep showing the removed account's folders.
+    setSelectedId(null)
+    if (MAILSHARE_LITE && accounts.length > 0) {
+      setSelectedExternalAccountId(accounts[0].id)
+      setExternalFolder("INBOX")
+      setMailView("external")
+    } else {
+      setSelectedExternalAccountId("")
+      if (mailView === "external") setMailView("folder")
+    }
+  }, [externalMailAccounts.data?.items, selectedExternalAccountId, mailView])
   React.useEffect(() => {
     if (!restrictedSharedMailbox || !folders.isSuccess || !labels.isSuccess) return
     if (mailView === "folder" && folders.data.items.some((item) => item.name === folder)) return
@@ -2993,6 +3007,14 @@ export function MailPage() {
   )
 }
 
+// External IMAP messages are stored in ordinary LanQin folders internally,
+// using names such as "External 0123456789ab deadbeef1234". They must NOT
+// appear as human-readable custom folders in the primary mailbox sidebar;
+// their parent accounts have a separate, appropriately labelled navigation.
+function isExternalIMAPStorageFolder(name: string): boolean {
+  return /^External [A-Za-z0-9_-]{1,12} [a-f0-9]{12}$/.test(name)
+}
+
 function buildMailMenuItems(
   folders: MailFolder[],
   starredCount: number,
@@ -3003,9 +3025,10 @@ function buildMailMenuItems(
   sendQueueCount: number,
   includeSendQueue: boolean
 ): MailMenuItem[] {
-  const byName = new Map(folders.map((item) => [item.name, item]))
+  const visibleFolders = folders.filter((item) => !isExternalIMAPStorageFolder(item.name))
+  const byName = new Map(visibleFolders.map((item) => [item.name, item]))
   const normalizedFolders = restrictedFolders
-    ? [...folders]
+    ? [...visibleFolders]
     : ["Inbox", "Drafts", "Sent", "Archive", "Spam", "Trash"].map(
         (name) =>
           byName.get(name) || {
@@ -3020,7 +3043,7 @@ function buildMailMenuItems(
             highestModseq: 1,
           }
       )
-  for (const item of folders) {
+  for (const item of visibleFolders) {
     if (!normalizedFolders.some((folder) => folder.name === item.name)) normalizedFolders.push(item)
   }
   const folderItems: MailMenuItem[] = normalizedFolders.map((item) => ({
