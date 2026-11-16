@@ -109,6 +109,19 @@ async function loadShares(){
     catch(e){showError(e);revoke.disabled=false}
    };
    buttons.append(copy,revoke);row.append(buttons)
+  }else if(status==="已撤销"){
+   const buttons=document.createElement("div");buttons.className="share-actions";
+   const remove=document.createElement("button");remove.className="danger";remove.textContent="删除记录";
+   remove.title="永久删除这条已撤销的共享记录，不会删除邮箱或邮件";
+   remove.onclick=async()=>{
+    if(!confirm("永久删除这条已撤销的共享记录？删除后不可恢复，但不会删除外部邮箱或邮件。"))return;
+    remove.disabled=true;
+    try{
+     await api("/me/external-imap-shares/"+encodeURIComponent(s.id)+"/record",{method:"DELETE"});
+     await loadShares();
+    }catch(e){showError(e);remove.disabled=false}
+   };
+   buttons.append(remove);row.append(buttons)
   }
   $("shares").append(row)
  });
