@@ -77,6 +77,40 @@ button.danger:hover{background:#ffeaea}
  .actions button{padding-left:8px;padding-right:8px}
  #newLink .actions{display:flex}#shares{padding:0 17px 15px}
 }
+
+/* LanQin's default light theme: neutral surface, monochrome actions and zinc borders. */
+:root{color:#18181b;background:#fafafa}
+body{background:#fafafa;color:#18181b}
+.topbar{background:#fff;border-color:#e4e4e7}
+.logo{background:#18181b;box-shadow:none}
+.top-tag{background:#f4f4f5;color:#52525b;border-color:#e4e4e7}
+.eyebrow{color:#71717a}
+h1{color:#18181b}
+p,.card-head p,.help{color:#71717a}
+.card{border-color:#e4e4e7;border-radius:11px;box-shadow:0 1px 2px rgba(24,24,27,.05)}
+.card-head{border-color:#e4e4e7}
+.card-head h2,.item b{color:#18181b}
+label{color:#52525b}
+input,select{color:#18181b;border-color:#d4d4d8;background:#fff}
+input:hover,select:hover{border-color:#a1a1aa}
+input::placeholder{color:#a1a1aa}
+button{background:#18181b;color:#fff;border-radius:8px}
+button:hover{background:#3f3f46}
+button:focus-visible,input:focus-visible,select:focus-visible{outline-color:#a1a1aa}
+button.secondary{background:#f4f4f5;color:#27272a;border:1px solid #e4e4e7}
+button.secondary:hover{background:#e4e4e7}
+button.danger{background:#ef4444;color:#fff;border:1px solid #ef4444;min-width:60px;white-space:nowrap;word-break:keep-all;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;line-height:1.3}
+button.danger:hover{background:#dc2626;border-color:#dc2626}
+.item{border-color:#e4e4e7;gap:14px;align-items:center}
+.item > div:first-child{flex:1 1 auto;min-width:0}
+.item small{color:#71717a;overflow-wrap:anywhere;word-break:break-word}
+#shares{color:#71717a}
+#newLink{background:#fafafa;border-color:#e4e4e7}
+#newLink b{color:#27272a}
+.link{border-color:#a1a1aa;color:#27272a}
+#preview{color:#27272a}
+.note{background:#fafafa;border-color:#e4e4e7;color:#71717a}
+.footer{color:#a1a1aa}
 </style></head><body>
 <header class="topbar"><div class="top-inner">
  <div class="brand"><span class="logo" aria-hidden="true">✉</span><span>LanQin Mail</span></div>
@@ -187,6 +221,36 @@ iframe{width:100%;height:min(51vh,550px);border:0;background:#fff}pre{font:inher
  iframe{height:60dvh}.empty{min-height:300px;padding:44px 20px}
 }
 @media(max-width:380px){.readonly{padding:6px 8px;font-size:11px}.brand span{font-size:10px}.hero h1{font-size:22px}.refresh{min-width:40px}}
+
+/* Match the neutral palette of the upstream LanQin UI. */
+:root{color:#18181b;background:#fafafa}
+body{background:#fafafa;color:#18181b}
+.topbar{border-color:#e4e4e7}
+.logo{background:#18181b;box-shadow:none}
+.brand strong{color:#18181b}
+.brand span{color:#71717a}
+.readonly{background:#f4f4f5;border-color:#e4e4e7;color:#52525b}
+.readonly:before{background:#71717a}
+.eyebrow{color:#71717a}
+.hero h1{color:#18181b}
+#subtitle{color:#71717a}
+.refresh{color:#27272a;border-color:#e4e4e7;box-shadow:none;border-radius:8px}
+.refresh:hover{background:#f4f4f5}
+button:focus-visible{outline-color:#a1a1aa}
+.mail-shell{gap:16px}
+.panel{border-color:#e4e4e7;border-radius:11px;box-shadow:0 1px 2px rgba(24,24,27,.05)}
+.pane-head,.reading-head{border-color:#e4e4e7}
+.pane-title,.reading-title{color:#27272a}
+.pane-desc,.reading-tag{color:#71717a}
+.mail{border-color:#f4f4f5;color:#27272a}
+.mail:hover,.mail.selected{background:#f4f4f5}
+.mail.selected:before{background:#18181b}
+.mail-time,.mail-snippet{color:#71717a}
+.detail-content h2{color:#18181b}
+.meta{color:#71717a;border-color:#e4e4e7}
+.mobile-back{background:#f4f4f5;color:#27272a}
+.empty-icon{background:#f4f4f5;color:#52525b}
+.empty p,.footnote{color:#71717a}
 </style></head><body>
 <header class="topbar"><div class="topbar-inner">
  <div class="brand"><div class="logo" aria-hidden="true">✉</div><div><strong>LanQin Mail</strong><span>安全邮件共享</span></div></div>
