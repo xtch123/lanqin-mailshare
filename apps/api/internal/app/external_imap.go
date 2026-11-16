@@ -2024,7 +2024,10 @@ func (c *goExternalIMAPClient) FetchNew(ctx context.Context, folder string, afte
 	if err != nil {
 		return nil, err
 	}
-	uids := boundedSearchUIDs(data.All, limit, false)
+	// Some IMAP servers return stale UIDs even for a bounded UID SEARCH.
+	// Filter against the persisted high-water mark BEFORE applying the batch limit,
+	// otherwise old messages can monopolize every batch indefinitely.
+	uids := boundedSearchUIDsAfter(data.All, afterUID, limit)
 	if len(uids) == 0 {
 		return nil, nil
 	}
@@ -2037,6 +2040,9 @@ func (c *goExternalIMAPClient) FetchNew(ctx context.Context, folder string, afte
 	}
 	out := []externalIMAPRemoteMessage{}
 	for _, message := range messages {
+		if uint32(message.UID) <= afterUID {
+			continue
+		}
 		raw := message.FindBodySection(bodySection)
 		out = append(out, fetchBufferToExternalMessage(folder, selected.UIDValidity, message, raw))
 	}
@@ -2092,6 +2098,37 @@ func boundedSearchUIDs(numSet imap.NumSet, limit int, newestFirst bool) []imap.U
 			if appendRange(uidRange.Start, uidRange.Stop, false) {
 				break
 			}
+		}
+	}
+	return uids
+}
+
+// boundedSearchUIDsAfter is deliberately independent of the server's UID SEARCH
+// criteria enforcement. Servers that return older matches must not make us
+// reread the same batch or hide later, higher-UID messages behind the limit.
+func boundedSearchUIDsAfter(numSet imap.NumSet, afterUID uint32, limit int) []imap.UID {
+	uidSet, ok := numSet.(imap.UIDSet)
+	if !ok || uidSet.Dynamic() || limit <= 0 || afterUID == ^uint32(0) {
+		return nil
+	}
+	minimum := imap.UID(afterUID + 1)
+	uids := make([]imap.UID, 0, min(limit, len(uidSet)))
+	for _, uidRange := range uidSet {
+		if uidRange.Start == 0 || uidRange.Stop < uidRange.Start || uidRange.Stop < minimum {
+			continue
+		}
+		start := uidRange.Start
+		if start < minimum {
+			start = minimum
+		}
+		for uid := start; ; uid++ {
+			uids = append(uids, uid)
+			if len(uids) == limit || uid == uidRange.Stop {
+				break
+			}
+		}
+		if len(uids) == limit {
+			break
 		}
 	}
 	return uids
