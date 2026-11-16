@@ -26,35 +26,105 @@ func shareHTMLHeaders(w http.ResponseWriter) {
 }
 
 const externalIMAPShareAdminHTML = `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>外部邮箱共享管理 · LanQin</title>
+<html lang="zh-CN"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>邮箱共享管理 · LanQin</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f6f7f9;color:#18202e;font:15px system-ui,-apple-system,"Microsoft YaHei",sans-serif}
-main{max-width:890px;margin:36px auto;padding:0 18px}header{margin-bottom:22px}h1{font-size:26px;margin:0 0 7px}p{color:#687485;line-height:1.6}
-section{background:white;border:1px solid #e1e5eb;border-radius:12px;padding:22px;margin-bottom:20px}
-label{display:block;font-size:13px;margin:15px 0 6px;font-weight:600}
-input,select{padding:11px;border:1px solid #cdd4df;border-radius:7px;width:100%;font-size:14px;background:white}
-button{border:0;background:#18202e;color:white;padding:11px 17px;border-radius:7px;cursor:pointer;font-weight:600}
-button:disabled{opacity:.5;cursor:default}button.secondary{background:#edf1f5;color:#222}button.danger{background:#fff2f1;color:#bd3434}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.actions{display:flex;gap:9px;margin-top:17px;flex-wrap:wrap}
-.item{border-top:1px solid #e5e8ed;padding:16px 0;display:flex;justify-content:space-between;align-items:center;gap:12px}
-small{color:#6d7a89;display:block;margin-top:5px;word-break:break-all}.link{border:1px dashed #a0b2c8;background:#f3f7fb;border-radius:8px;padding:13px;word-break:break-all;margin-top:12px}
-#message{color:#c34137;min-height:24px}#newLink{display:none}a{color:#2457a6}
-@media(max-width:620px){.grid{grid-template-columns:1fr}.item{align-items:flex-start;flex-direction:column}}
-</style></head><body><main>
-<header><h1>外部邮箱共享管理</h1><p>一个 seek.li 邮箱对应一个拼车账号。每个车友单独生成只读链接，支持随时撤销、设置有效期与历史邮件范围。</p></header>
-<section><h2>创建共享链接</h2>
-<label for="account">外部 IMAP 邮箱</label><select id="account"></select>
-<div class="grid"><div><label for="label">车友备注（选填）</label><input id="label" maxlength="64" placeholder="例如：一号车 · 成员 A"></div>
-<div><label for="days">共享链接有效期</label><select id="days"><option value="7">7 天</option><option value="1">1 天</option><option value="30">30 天</option><option value="0">永久有效，直到手动撤销</option></select></div></div>
-<label for="visible">可查看多久以前的邮件</label><select id="visible"><option value="1440">最近 24 小时</option><option value="60">最近 1 小时</option><option value="10080">最近 7 天</option><option value="0">全部已同步邮件</option></select>
-<div class="grid"><div><label for="customDays">自定义链接有效期（天，可选）</label><input id="customDays" type="number" min="1" max="3650" step="1" placeholder="留空使用上方预设"></div>
-<div><label for="customVisible">自定义可见范围（分钟，可选）</label><input id="customVisible" type="number" min="0" max="525600" step="1" placeholder="留空使用上方预设；0 为全部"></div></div>
-<div class="actions"><button id="create">生成专属链接</button><button id="refresh" class="secondary">刷新共享记录</button></div>
-<p id="message"></p><div id="newLink"><b>请立即复制保存，下次不会再显示完整链接：</b><div id="linkText" class="link"></div><div class="actions"><button id="copy">复制链接</button><a id="preview" href="#" target="_blank" rel="noopener noreferrer">预览共享页面</a></div></div>
-</section><section><h2>已有共享</h2><div id="shares">读取中……</div></section>
-<p>管理页面需要 LanQin 管理员登录。车友使用专用链接，无需注册。本页为独立开发预览，尚未集成原版侧栏。</p>
-</main><script defer src="/api/me/external-imap-share-panel/app.js"></script></body></html>`
-
+:root{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;color:#20344d;background:#f5f7fb;font-synthesis:none}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}button,input,select{font:inherit}
+button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #91b7f5;outline-offset:2px}
+.topbar{background:white;border-bottom:1px solid #e8edf4}.top-inner{max-width:1150px;margin:auto;padding:17px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.brand{display:flex;align-items:center;gap:11px;font-size:14px;font-weight:760}.logo{width:36px;height:36px;border-radius:10px;background:#245fa9;color:white;display:grid;place-items:center;font-size:19px}
+.top-tag{font-size:11px;border:1px solid #dbe6f6;background:#f1f6fd;padding:7px 11px;border-radius:999px;color:#4775ab}
+.workspace{max-width:1150px;margin:0 auto;padding:36px 24px 48px}
+.eyebrow{font-size:11px;letter-spacing:.12em;color:#5a89c3;font-weight:850}
+h1{font-size:28px;letter-spacing:-.04em;color:#162d49;margin:8px 0 9px}p{font-size:13px;line-height:1.8;color:#7e8da0;margin:0}
+.intro{margin-bottom:27px;max-width:680px}
+.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(310px,1fr);gap:18px;align-items:start}
+.card{background:#fff;border:1px solid #e5ebf2;border-radius:15px;box-shadow:0 7px 24px #1b386208;min-width:0;overflow:hidden}
+.card-head{padding:22px 25px 18px;border-bottom:1px solid #eef1f6}
+.card-head h2{font-size:16px;letter-spacing:-.015em;margin:0 0 6px}.card-head p{font-size:12px}
+.card-body{padding:18px 25px 24px}
+.field{margin-bottom:17px}label{display:block;font-weight:660;font-size:12px;color:#50647c;margin:0 0 8px}
+input,select{background:#fff;border:1px solid #dce4ee;border-radius:9px;padding:11px 12px;width:100%;font-size:13px;color:#263c56;min-height:43px}
+input:hover,select:hover{border-color:#aebfd6}input::placeholder{color:#a3afbe}
+.two-col{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.help{display:block;font-size:11px;color:#9aa7b7;margin-top:7px;line-height:1.5}
+button{border:0;border-radius:9px;background:#285fa7;color:#fff;font-weight:720;font-size:13px;padding:11px 16px;min-height:41px;transition:background .15s}
+button:hover{background:#204f92}button:disabled{opacity:.55;cursor:default}
+button.secondary{background:#eef3f9;color:#415a77}button.secondary:hover{background:#e3ecf7}
+button.danger{background:#fff3f3;color:#b74747;padding:9px 12px;font-size:12px;min-height:35px}
+button.danger:hover{background:#ffeaea}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px}
+#message{color:#bb4040;min-height:20px;margin:12px 0 0;font-size:12px}
+#newLink{display:none;border:1px solid #d4e7f9;background:#f3f8fe;border-radius:12px;padding:16px;margin-top:14px}
+#newLink b{font-size:12px;color:#315b88}.link{background:white;border:1px dashed #b8cde3;border-radius:9px;padding:12px;margin-top:10px;font-size:12px;line-height:1.6;word-break:break-all;color:#295c94}
+#preview{font-size:12px;color:#285fa7;font-weight:700;text-decoration:none}#preview:hover{text-decoration:underline}
+#shares{padding:0 20px 20px;min-height:74px;font-size:12px;color:#8b98ab}
+.item{padding:16px 0;border-bottom:1px solid #edf0f5;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.item:last-child{border-bottom:0}.item b{display:block;font-size:13px;color:#263c56}
+.item small{display:block;color:#91a0b0;line-height:1.6;font-size:11px;margin-top:6px;overflow-wrap:anywhere}
+.note{font-size:12px;color:#8596a8;padding:17px 21px;background:#f8fafc;border-top:1px solid #edf1f6;line-height:1.7}
+.footer{color:#9ba7b6;font-size:11px;text-align:center;margin:30px 0}
+[hidden]{display:none!important}
+@media(max-width:900px){.layout{grid-template-columns:minmax(0,1fr)}.workspace{max-width:760px}}
+@media(max-width:580px){
+ .top-inner{padding:13px 16px}.workspace{padding:23px 14px 32px}
+ h1{font-size:24px}.intro{margin-bottom:20px}.layout{gap:14px}
+ .card{border-radius:12px}.card-head{padding:19px 17px 15px}.card-body{padding:18px 17px 21px}
+ .two-col{grid-template-columns:minmax(0,1fr);gap:0}
+ .actions{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .actions button{padding-left:8px;padding-right:8px}
+ #newLink .actions{display:flex}#shares{padding:0 17px 15px}
+}
+</style></head><body>
+<header class="topbar"><div class="top-inner">
+ <div class="brand"><span class="logo" aria-hidden="true">✉</span><span>LanQin Mail</span></div>
+ <span class="top-tag">外部邮箱 · 共享管理</span>
+</div></header>
+<main class="workspace">
+ <div class="eyebrow">MAIL SHARING</div>
+ <h1>外部邮箱共享管理</h1>
+ <p class="intro">为每位车友创建一条独立的只读访问链接，随时控制有效期和可见邮件范围。车友无需登录 LanQin。</p>
+ <div class="layout">
+  <section class="card">
+   <div class="card-head"><h2>创建共享链接</h2><p>请选择要共享的外部 IMAP 邮箱。</p></div>
+   <div class="card-body">
+    <div class="field"><label for="account">外部邮箱</label><select id="account"></select></div>
+    <div class="field"><label for="label">车友备注（选填）</label><input id="label" maxlength="64" placeholder="例如：一号车 · 成员 A"></div>
+    <div class="two-col">
+     <div class="field">
+      <label for="days">共享链接有效期</label><select id="days">
+       <option value="30">30 天</option><option value="7">7 天</option><option value="1">1 天</option>
+       <option value="0">永久有效，直到撤销</option><option value="custom">自定义天数…</option>
+      </select>
+      <div id="customDaysWrap" class="field" hidden><label for="customDays">自定义有效期（天）</label><input id="customDays" type="number" min="1" max="3650" step="1" placeholder="输入 1–3650"><small class="help">覆盖上方预设，仅在选「自定义」时生效</small></div>
+     </div>
+     <div class="field">
+      <label for="visible">历史邮件可见范围</label><select id="visible">
+       <option value="1440">最近 24 小时</option><option value="60">最近 1 小时</option>
+       <option value="10080">最近 7 天</option><option value="0">全部已同步邮件</option>
+       <option value="custom">自定义分钟数…</option>
+      </select>
+      <div id="customVisibleWrap" class="field" hidden><label for="customVisible">自定义可见范围（分钟）</label><input id="customVisible" type="number" min="0" max="525600" step="1" placeholder="0 为全部"><small class="help">例如 30 = 最近半小时</small></div>
+     </div>
+    </div>
+    <div class="actions"><button id="create" type="button">生成专属链接</button><button id="refresh" type="button" class="secondary">刷新共享记录</button></div>
+    <p id="message" role="alert"></p>
+    <div id="newLink"><b>专属链接已生成 · 请立即复制保存</b><div id="linkText" class="link"></div>
+     <div class="actions"><button id="copy" type="button">复制链接</button><a id="preview" href="#" target="_blank" rel="noopener noreferrer">预览车友页面 ↗</a></div>
+    </div>
+   </div>
+  </section>
+  <aside class="card">
+   <div class="card-head"><h2>已有共享</h2><p>每条链接独立管理，撤销后立即失效。</p></div>
+   <div id="shares">读取中…</div>
+   <div class="note">建议每位车友单独生成链接，避免一人退出后需要更换所有人的访问凭证。</div>
+  </aside>
+ </div>
+ <p class="footer">仅共享已同步的邮件，不提供发信、删除或更改邮件状态的功能。</p>
+</main>
+<script defer src="/api/me/external-imap-share-panel/app.js"></script></body></html>`
 const externalIMAPShareViewerHTML = `<!doctype html>
 <html lang="zh-CN"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
