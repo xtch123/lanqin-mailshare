@@ -1,0 +1,34 @@
+services:
+  lanqin-mailshare-lite:
+    image: lanqin-mailshare:lite-arm64
+    container_name: lanqin-mailshare-lite
+    restart: unless-stopped
+    init: true
+    env_file:
+      - .env
+    environment:
+      LANQIN_MAILSHARE_LITE: "true"
+      LANQIN_DB_DRIVER: sqlite
+      LANQIN_DB_PATH: /data/lanqin.db
+      LANQIN_DATA_DIR: /data
+      LANQIN_MAILDIR_ROOT: /var/mail/vhosts
+      LANQIN_ADDR: "127.0.0.1:8080"
+      LANQIN_EXTERNAL_IMAP_ENABLED: "true"
+      LANQIN_EXTERNAL_IMAP_SYNC_SECONDS: "20"
+      LANQIN_SUBMISSION_ADDR: ""
+      LANQIN_SUBMISSION_TLS_ADDR: ""
+      LANQIN_SMTP_HOST: ""
+      LANQIN_NOTIFICATION_SECRET_KEY: ""
+      LANQIN_STATUS_WEBHOOK_URL: ""
+      LANQIN_BACKUP_SECRET_KEY: ""
+      LANQIN_PUBLIC_BASE_URL: http://localhost:18090
+      LANQIN_COOKIE_NAME: lanqin_mailshare_lite
+      LANQIN_ALLOW_INSECURE_HTTP: "true"
+    ports:
+      - "127.0.0.1:18090:80"
+    volumes:
+      - ./data:/data
+      - ./mail:/var/mail/vhosts
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 15s
