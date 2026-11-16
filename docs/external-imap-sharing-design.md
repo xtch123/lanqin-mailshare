@@ -1,7 +1,7 @@
 # 外部 IMAP 只读共享设计（开发分支）
 
 > 项目：`xtch123/lanqin-mailshare`；上游：`LanQin996/LanQin-Email`。  
-> 状态：设计基线，**功能尚未实现**。不得将本文件视为可对外开放共享的完成证明。
+> 状态：开发分支已实现基础功能，OCI 隔离测试环境已启动；**尚未完成公网安全与双邮箱实测验收**。
 
 ## 已验证的原版能力
 
@@ -27,7 +27,7 @@
 - 管理 API 必须同时验证当前登录用户拥有目标外部账号；车友 API 只接受共享凭据，不继承管理员 Session。
 - 每次获取列表、详情或附件时均验证：共享存在、未撤销、未过期，目标外部账号仍启用，目标邮件有 `external_imap_messages.account_id = share.account_id` 的映射，并满足可见时间范围。
 - 数据访问必须采用参数化 SQL 和服务端范围校验；不得只依靠前端隐藏。跨账号邮件 ID 和附件 ID 应返回 404，不能泄露其它邮箱存在性。
-- 共享 Token 使用密码学安全随机数（不少于 256 bit），数据库只存哈希。只在创建时显示完整链接一次；列表接口不返回原始 Token。
+- 共享 Token 使用密码学安全随机数（256 bit）。数据库保存校验用 SHA-256 哈希，以及使用 `LANQIN_EXTERNAL_IMAP_SECRET_KEY` 派生的独立 AES-GCM 密钥加密后的令牌；列表接口不返回原始 Token。管理员可通过单独鉴权接口再次复制。旧版仅存哈希的链接可执行“重置链接”升级，旧令牌即时失效。必须妥善保管加密主密钥，丢失会影响已存链接的重新复制。
 - 优先把 Token 放在 URL fragment（不发送到服务器访问日志），由网页用请求头提交；响应设置 `Cache-Control: no-store`、`Referrer-Policy: no-referrer`，禁用索引，并配置基本限流。
 - 邮件 HTML 必须在隔离 iframe 中显示，经严格清理，禁止脚本、表单、iframe 嵌套、javascript: 等可执行内容。外链只允许安全协议（HTTPS 等），`target=_blank` 同时使用 `rel=noopener noreferrer`；默认不加载远程图片。原文链接保留可点击能力。
 - 附件下载应单独鉴权，强制安全 Content-Disposition 与危险 MIME 下载，避免浏览器执行附件。
