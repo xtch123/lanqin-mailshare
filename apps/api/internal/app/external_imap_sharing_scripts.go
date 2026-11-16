@@ -71,73 +71,136 @@ $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(lastLink);$(
 loadAccounts().then(loadShares).catch(showError);`
 
 const externalIMAPShareViewerJS = `"use strict";
-const token=decodeURIComponent(location.hash.slice(1)),list=document.getElementById("list"),
- detail=document.getElementById("detail"),err=document.getElementById("error"),subtitle=document.getElementById("subtitle");
+const token=decodeURIComponent(location.hash.slice(1));
+const list=document.getElementById("list"),detail=document.getElementById("detail");
+const err=document.getElementById("error"),subtitle=document.getElementById("subtitle");
+const mailShell=document.getElementById("mailShell"),mailCount=document.getElementById("mailCount");
+let selectedMessageId="",currentAccountName="";
+const mobile=()=>window.matchMedia("(max-width: 720px)").matches;
+
 async function get(path){
  const r=await fetch("/api/public/shared-inbox"+path,{cache:"no-store",headers:{"Authorization":"Bearer "+token}});
- if(!r.ok)throw Error(r.status===401?"共享链接无效、已撤销或已过期":"请求失败 HTTP "+r.status);
+ if(!r.ok)throw Error(r.status===401?"共享链接无效、已撤销或已过期":"请求失败（HTTP "+r.status+"）");
  return r.json();
 }
-function clear(node){node.replaceChildren()}
-function make(tag,text){const n=document.createElement(tag);n.textContent=text||"";return n}
+function element(tag,text,cls){
+ const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;
+}
+function emptyState(heading,description){
+ const wrap=element("div",undefined,"empty"),icon=element("div","✉","empty-icon");
+ wrap.append(icon,element("h3",heading),element("p",description));return wrap;
+}
+function dateText(value){
+ const date=new Date(value);
+ return Number.isNaN(date.getTime())?"":date.toLocaleString("zh-CN",{month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+}
+function showMessage(){
+ mailShell.classList.add("detail-open");
+ if(mobile())window.scrollTo({top:0,behavior:"instant"});
+}
+document.getElementById("backToList").onclick=()=>{
+ mailShell.classList.remove("detail-open");
+ if(mobile())window.scrollTo({top:0,behavior:"instant"});
+};
 async function openMail(id){
- clear(detail);detail.append(make("p","正在加载邮件……"));
+ selectedMessageId=id;
+ showMessage();
+ detail.replaceChildren(emptyState("正在加载邮件","正在安全读取邮件正文…"));
  try{
   const m=await get("/messages/"+encodeURIComponent(id));
-  clear(detail);detail.append(make("h2",m.subject),make("div",(m.fromName||m.from)+" · "+new Date(m.receivedAt).toLocaleString()));
-  const frame=document.createElement("iframe");
-  frame.setAttribute("sandbox","allow-popups allow-popups-to-escape-sandbox");
-  frame.setAttribute("referrerpolicy","no-referrer");
-  frame.setAttribute("title","邮件正文");
-  const html=m.bodyHtml||"";
-  if(html){
-   frame.srcdoc="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'\"><base target=\"_blank\">"+html;
-   detail.append(frame)
-  }else{detail.append(make("pre",m.bodyText||"（邮件没有正文）"))}
+  // A second selection can finish first; never show the wrong message.
+  if(selectedMessageId!==id)return;
+  detail.replaceChildren();
+  detail.append(element("h2",m.subject||"（无主题）"));
+  detail.append(element("div",(m.fromName||m.from)+" · "+dateText(m.receivedAt),"meta"));
+  if(m.bodyHtml){
+   const frame=document.createElement("iframe");
+   frame.setAttribute("sandbox","allow-popups allow-popups-to-escape-sandbox");
+   frame.setAttribute("referrerpolicy","no-referrer");
+   frame.setAttribute("title","邮件正文");
+   // The server sanitizes the email HTML. This frame also blocks scripts,
+   // images from remote hosts and form submissions.
+   frame.srcdoc="<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'none'\"><base target=\"_blank\">"+m.bodyHtml;
+   detail.append(frame);
+  }else{
+   detail.append(element("pre",m.bodyText||"（邮件没有正文）"));
+  }
   if((m.attachments||[]).length){
-   const box=make("section");box.append(make("h3","附件"));
-   (m.attachments||[]).forEach(att=>{
-    const button=make("button","下载 "+att.filename+" ("+Math.round(att.sizeBytes/1024)+" KB)");
-    button.className="refresh";button.style.margin="5px";
+   const box=element("section");box.append(element("h3","附件","attachment-title"));
+   m.attachments.forEach(att=>{
+    const button=element("button","↓ "+att.filename+" · "+Math.max(1,Math.round(att.sizeBytes/1024))+" KB","refresh attachment-btn");
+    button.type="button";
     button.onclick=async()=>{
      try{
-      const res=await fetch("/api/public/shared-inbox/messages/"+encodeURIComponent(m.id)+"/attachments/"+encodeURIComponent(att.id),{
-       cache:"no-store",headers:{"Authorization":"Bearer "+token}
-      });
+      const res=await fetch("/api/public/shared-inbox/messages/"+encodeURIComponent(m.id)+"/attachments/"+encodeURIComponent(att.id),{cache:"no-store",headers:{"Authorization":"Bearer "+token}});
       if(!res.ok)throw Error("附件下载失败");
-      const u=URL.createObjectURL(await res.blob()),link=document.createElement("a");
-      link.href=u;link.download=att.filename||"attachment";document.body.append(link);link.click();link.remove();
-      setTimeout(()=>URL.revokeObjectURL(u),30000)
+      const url=URL.createObjectURL(await res.blob()),anchor=document.createElement("a");
+      anchor.href=url;anchor.download=att.filename||"attachment";
+      document.body.append(anchor);anchor.click();anchor.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),30000);
      }catch(e){err.textContent=e.message}
     };
-    box.append(button)
+    box.append(button);
    });
-   detail.append(box)
+   detail.append(box);
   }
- }catch(e){clear(detail);detail.append(make("p",e.message))}
+ }catch(e){
+  if(selectedMessageId===id)detail.replaceChildren(emptyState("邮件暂不可用",e.message));
+ }
 }
-let currentPage=0;
 async function loadPage(page,append){
  const data=await get("/messages?page="+page);
- subtitle.textContent=(data.accountName||"外部邮箱")+" · 已加载邮件";
- if(!append){clear(list);err.textContent=""}
- if(!append&&!(data.items||[]).length){list.append(make("p","当前可见范围内没有邮件"))}
- (data.items||[]).forEach((m,i)=>{
-  const b=make("button");b.className="mail";b.append(make("b",m.subject),make("small",(m.fromName||m.from)+" · "+new Date(m.receivedAt).toLocaleString()),make("small",m.snippet));
-  b.onclick=()=>{list.querySelectorAll(".mail").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");openMail(m.id)};
+ currentAccountName=data.accountName||"外部邮箱";
+ const messages=data.items||[];
+ subtitle.textContent=currentAccountName+" · 只读访问";
+ if(!append){
+  list.replaceChildren();
+  err.textContent="";
+  if(!messages.length){
+   mailCount.textContent="0 封";
+   list.append(emptyState("当前范围内没有邮件","共享链接本身有效。可能是邮箱尚未同步，或邮件早于管理员设置的可见时间范围。"));
+  }else mailCount.textContent="最新 "+messages.length+" 封";
+ }
+ messages.forEach(m=>{
+  const b=element("button",undefined,"mail"),top=element("div",undefined,"mail-top");
+  b.type="button";
+  top.append(element("b",m.fromName||m.from||"未知发件人"),element("span",dateText(m.receivedAt),"mail-time"));
+  b.append(top,element("span",m.subject||"（无主题）","mail-subject"),element("span",m.snippet||"","mail-snippet"));
+  b.title=m.subject||"（无主题）";
+  if(m.id===selectedMessageId)b.classList.add("selected");
+  b.onclick=()=>{
+   list.querySelectorAll(".mail").forEach(x=>x.classList.remove("selected"));
+   b.classList.add("selected");
+   openMail(m.id);
+  };
   list.append(b);
-  if(page===0&&i===0&&detail.querySelector("h2")?.textContent==="选择一封邮件"){b.click()}
+  if(page===0&&!append&&!selectedMessageId&&!mobile()&&messages.indexOf(m)===0)b.click();
  });
  if(data.nextPage!==null&&data.nextPage!==undefined){
-  const more=make("button","加载更多");more.className="mail";
-  more.onclick=async()=>{more.remove();try{await loadPage(data.nextPage,true)}catch(e){err.textContent=e.message}};
-  list.append(more)
+  const more=element("button","加载更早的邮件","mail");
+  more.type="button";
+  more.onclick=async()=>{
+   more.disabled=true;
+   try{more.remove();await loadPage(data.nextPage,true)}
+   catch(e){err.textContent=e.message}
+  };
+  list.append(more);
  }
- currentPage=page;
 }
 async function refresh(){
- if(!token){subtitle.textContent="共享链接缺少访问令牌";err.textContent="请使用管理员提供的完整链接";return}
- try{await loadPage(0,false)}catch(e){err.textContent=e.message;subtitle.textContent="无法读取共享邮箱"}
+ if(!token){
+  subtitle.textContent="未提供访问凭证";
+  err.textContent="共享链接缺少访问令牌，请使用管理员提供的完整链接。";
+  list.replaceChildren(emptyState("无法访问","请重新打开完整的共享链接。"));
+  return;
+ }
+ try{await loadPage(0,false)}
+ catch(e){
+  err.textContent=e.message;
+  subtitle.textContent="无法访问共享收件箱";
+  list.replaceChildren(emptyState("无法读取邮件",e.message));
+ }
 }
 document.getElementById("refresh").onclick=refresh;
-refresh();setInterval(refresh,30000);`
+refresh();
+setInterval(refresh,30000);`
