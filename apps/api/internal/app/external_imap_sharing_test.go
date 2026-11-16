@@ -252,3 +252,15 @@ func TestExternalIMAPShareFastViewerPolling(t *testing.T) {
 		}
 	}
 }
+
+func TestExternalIMAPInboxPriority(t *testing.T) {
+	folders := []externalIMAPRemoteFolder{
+		{Name: "Sent"}, {Name: "Archive"}, {Name: "inbox"}, {Name: "Trash"},
+	}
+	prioritizeExternalIMAPInbox(folders)
+	for i, want := range []string{"inbox", "Sent", "Archive", "Trash"} {
+		if folders[i].Name != want {
+			t.Fatalf("folder %d: got %q, want %q", i, folders[i].Name, want)
+		}
+	}
+}
