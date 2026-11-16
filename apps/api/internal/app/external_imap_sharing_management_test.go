@@ -128,11 +128,43 @@ func TestExternalIMAPShareOwnerCanCopyFilterAndRotate(t *testing.T) {
 		t.Fatalf("rotated old guest token should be invalid, got %d", guestResponse.Code)
 	}
 
+	// An active link must be explicitly revoked before its record can be
+	// permanently removed, and the delete endpoint must require a login.
+	if code := admin.do("DELETE", "/api/me/external-imap-shares/"+shareA.ID+"/record", nil, nil); code != http.StatusNotFound {
+		t.Fatalf("active sharing record must not be deleted: %d", code)
+	}
+	anonymousDelete := httptest.NewRecorder()
+	a.Router().ServeHTTP(anonymousDelete, httptest.NewRequest(http.MethodDelete, "/api/me/external-imap-shares/"+shareA.ID+"/record", nil))
+	if anonymousDelete.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous share record deletion should fail: %d", anonymousDelete.Code)
+	}
 	if code := admin.do("DELETE", "/api/me/external-imap-shares/"+shareA.ID, nil, nil); code != http.StatusOK {
 		t.Fatalf("revoke status %d", code)
 	}
 	if code := admin.do("GET", "/api/me/external-imap-shares/"+shareA.ID+"/link", nil, nil); code != http.StatusNotFound {
 		t.Fatalf("revoked token should not be copied: %d", code)
+	}
+	if code := admin.do("DELETE", "/api/me/external-imap-shares/"+shareA.ID+"/record", nil, nil); code != http.StatusOK {
+		t.Fatalf("delete revoked share record status %d", code)
+	}
+	var removed int
+	if err := a.db.QueryRow(`SELECT COUNT(*) FROM external_imap_share_links WHERE id=?`, shareA.ID).Scan(&removed); err != nil || removed != 0 {
+		t.Fatalf("deleted sharing record still exists: %d, %v", removed, err)
+	}
+	if code := admin.do("DELETE", "/api/me/external-imap-shares/"+shareA.ID+"/record", nil, nil); code != http.StatusNotFound {
+		t.Fatalf("duplicate deletion should not succeed: %d", code)
+	}
+	if code := admin.do("GET", "/api/me/external-imap-shares?accountId=external-share-a", nil, &listing); code != http.StatusOK {
+		t.Fatalf("read shares after deletion status %d", code)
+	}
+	for _, item := range listing.Items {
+		if item.ID == shareA.ID {
+			t.Fatal("deleted sharing record must disappear from owner's list")
+		}
+	}
+	// Other mailbox links must be untouched by deleting this record.
+	if code := admin.do("GET", "/api/me/external-imap-shares/"+shareB.ID+"/link", nil, &copied); code != http.StatusOK || copied.URL != shareB.URL {
+		t.Fatalf("delete of unrelated share damaged other account: %d", code)
 	}
 }
 
