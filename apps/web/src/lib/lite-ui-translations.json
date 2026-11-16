@@ -1,0 +1,614 @@
+{
+  "邮箱接入管理": {
+    "zh-TW": "郵箱接入管理",
+    "en": "Mailbox connections"
+  },
+  "共享管理": {
+    "zh-TW": "共享管理",
+    "en": "Share management"
+  },
+  "账户设置": {
+    "zh-TW": "帳戶設定",
+    "en": "Account settings"
+  },
+  "外部邮箱": {
+    "zh-TW": "外部郵箱",
+    "en": "External mailboxes"
+  },
+  "尚未接入外部邮箱": {
+    "zh-TW": "尚未接入外部郵箱",
+    "en": "No external mailboxes connected"
+  },
+  "管理": {
+    "zh-TW": "管理",
+    "en": "Manage"
+  },
+  "收起侧栏": {
+    "zh-TW": "收起側邊欄",
+    "en": "Collapse sidebar"
+  },
+  "还没有外部 IMAP 邮箱": {
+    "zh-TW": "尚未有外部 IMAP 郵箱",
+    "en": "No external IMAP accounts"
+  },
+  "添加外部邮箱": {
+    "zh-TW": "新增外部郵箱",
+    "en": "Add external mailbox"
+  },
+  "已接入邮箱": {
+    "zh-TW": "已接入郵箱",
+    "en": "Connected mailboxes"
+  },
+  "管理 IMAP 连接、同步状态与账号配置。": {
+    "zh-TW": "管理 IMAP 連線、同步狀態與帳戶設定。",
+    "en": "Manage IMAP connections, synchronization and account settings."
+  },
+  "接入并同步外部 IMAP 邮箱，集中管理同步和车友共享。": {
+    "zh-TW": "接入並同步外部 IMAP 郵箱，集中管理同步及分享。",
+    "en": "Connect and sync external IMAP mailboxes, then manage sharing in one place."
+  },
+  "当前账号没有可用的本地邮箱容器，无法保存外部邮箱接入配置。": {
+    "zh-TW": "目前帳戶沒有可用的本地郵箱，無法儲存外部郵箱連線。",
+    "en": "No local mailbox is available for storing external account settings."
+  },
+  "添加一个外部邮箱即可同步并生成共享链接。": {
+    "zh-TW": "新增外部郵箱即可同步並產生分享連結。",
+    "en": "Connect a mailbox to sync messages and create sharing links."
+  },
+  "正在读取邮箱...": {
+    "zh-TW": "正在讀取郵箱…",
+    "en": "Loading mailboxes..."
+  },
+  "邮箱名称": {
+    "zh-TW": "郵箱名稱",
+    "en": "Mailbox name"
+  },
+  "例如：Netflix 账号 1": {
+    "zh-TW": "例如：Netflix 帳戶 1",
+    "en": "e.g. Netflix account 1"
+  },
+  "邮箱地址 / 用户名": {
+    "zh-TW": "郵箱地址 / 使用者名稱",
+    "en": "Email address / username"
+  },
+  "IMAP 服务器": {
+    "zh-TW": "IMAP 伺服器",
+    "en": "IMAP server"
+  },
+  "端口": {
+    "zh-TW": "連接埠",
+    "en": "Port"
+  },
+  "连接加密": {
+    "zh-TW": "連線加密",
+    "en": "Connection security"
+  },
+  "SSL/TLS（推荐）": {
+    "zh-TW": "SSL/TLS（推薦）",
+    "en": "SSL/TLS (recommended)"
+  },
+  "不加密（不推荐）": {
+    "zh-TW": "不加密（不推薦）",
+    "en": "Unencrypted (not recommended)"
+  },
+  "存储模式": {
+    "zh-TW": "儲存模式",
+    "en": "Storage mode"
+  },
+  "同步到本地（共享必选）": {
+    "zh-TW": "同步到本地（分享必選）",
+    "en": "Sync locally (required for sharing)"
+  },
+  "远端直连（不能共享）": {
+    "zh-TW": "遠端直連（不能分享）",
+    "en": "Remote access (no sharing)"
+  },
+  "密码（留空保持原密码）": {
+    "zh-TW": "密碼（留空保留原密碼）",
+    "en": "Password (leave blank to keep)"
+  },
+  "IMAP 密码": {
+    "zh-TW": "IMAP 密碼",
+    "en": "IMAP password"
+  },
+  "不修改请留空": {
+    "zh-TW": "不修改請留空",
+    "en": "Leave blank to keep"
+  },
+  "请输入邮箱密码": {
+    "zh-TW": "請輸入郵箱密碼",
+    "en": "Enter mailbox password"
+  },
+  "隐藏": {
+    "zh-TW": "隱藏",
+    "en": "Hide"
+  },
+  "显示": {
+    "zh-TW": "顯示",
+    "en": "Show"
+  },
+  "启用账号": {
+    "zh-TW": "啟用帳戶",
+    "en": "Enable account"
+  },
+  "同步已读状态": {
+    "zh-TW": "同步已讀狀態",
+    "en": "Sync read status"
+  },
+  "远端直连模式不能创建车友共享链接。若需要共享，请选择同步到本地。": {
+    "zh-TW": "遠端直連模式無法建立分享連結。如需分享，請選擇同步到本地。",
+    "en": "Remote access cannot create share links. Select local synchronization for sharing."
+  },
+  "同步到本地后，车友通过只读链接查看邮件；不提供发信能力。": {
+    "zh-TW": "同步到本地後，成員可透過唯讀連結查看郵件；不提供寄信功能。",
+    "en": "After syncing locally, guests can read messages through links. Sending mail is disabled."
+  },
+  "取消": {
+    "zh-TW": "取消",
+    "en": "Cancel"
+  },
+  "保存中…": {
+    "zh-TW": "儲存中…",
+    "en": "Saving…"
+  },
+  "保存修改": {
+    "zh-TW": "儲存變更",
+    "en": "Save changes"
+  },
+  "添加并保存": {
+    "zh-TW": "新增並儲存",
+    "en": "Add and save"
+  },
+  "编辑外部 IMAP 邮箱": {
+    "zh-TW": "編輯外部 IMAP 郵箱",
+    "en": "Edit external IMAP mailbox"
+  },
+  "添加外部 IMAP 邮箱": {
+    "zh-TW": "新增外部 IMAP 郵箱",
+    "en": "Add external IMAP mailbox"
+  },
+  "已启用": {
+    "zh-TW": "已啟用",
+    "en": "Enabled"
+  },
+  "已停用": {
+    "zh-TW": "已停用",
+    "en": "Disabled"
+  },
+  "本地同步": {
+    "zh-TW": "本地同步",
+    "en": "Locally synced"
+  },
+  "远端直连": {
+    "zh-TW": "遠端直連",
+    "en": "Remote access"
+  },
+  "状态：": {
+    "zh-TW": "狀態：",
+    "en": "Status: "
+  },
+  "尚未同步": {
+    "zh-TW": "尚未同步",
+    "en": "Not yet synced"
+  },
+  "最近同步：": {
+    "zh-TW": "最近同步：",
+    "en": "Last synced: "
+  },
+  "测试连接": {
+    "zh-TW": "測試連線",
+    "en": "Test connection"
+  },
+  "编辑": {
+    "zh-TW": "編輯",
+    "en": "Edit"
+  },
+  "停用": {
+    "zh-TW": "停用",
+    "en": "Disable"
+  },
+  "启用": {
+    "zh-TW": "啟用",
+    "en": "Enable"
+  },
+  "删除": {
+    "zh-TW": "刪除",
+    "en": "Delete"
+  },
+  "查看收件箱": {
+    "zh-TW": "查看收件匣",
+    "en": "Open inbox"
+  },
+  "处理中": {
+    "zh-TW": "處理中",
+    "en": "Working"
+  },
+  "缺少本地邮箱容器，无法保存外部 IMAP 账号": {
+    "zh-TW": "缺少本地郵箱，無法儲存外部 IMAP 帳戶",
+    "en": "A local mailbox is required to save this IMAP account"
+  },
+  "新邮箱需要填写 IMAP 密码或应用专用密码": {
+    "zh-TW": "新增郵箱需要 IMAP 密碼或應用程式密碼",
+    "en": "New mailboxes require an IMAP password or app password"
+  },
+  "IMAP 端口必须在 1 到 65535 之间": {
+    "zh-TW": "IMAP 連接埠必須介於 1 至 65535",
+    "en": "IMAP port must be between 1 and 65535"
+  },
+  "确定删除「{0}」的接入配置？相关共享链接将不可用，已同步的邮件不会清除。": {
+    "zh-TW": "確定刪除「{0}」的連線設定？相關分享連結將無法使用，已同步的郵件不會清除。",
+    "en": "Remove connection for “{0}”? Its share links will stop working. Synced mail is preserved."
+  },
+  "连接成功，检测到 {0} 个文件夹": {
+    "zh-TW": "連線成功，找到 {0} 個資料夾",
+    "en": "Connected successfully; found {0} folders"
+  },
+  "同步完成": {
+    "zh-TW": "同步完成",
+    "en": "Sync complete"
+  },
+  "邮箱接入配置已删除": {
+    "zh-TW": "郵箱連線設定已刪除",
+    "en": "Mailbox connection removed"
+  },
+  "邮箱已停用": {
+    "zh-TW": "郵箱已停用",
+    "en": "Mailbox disabled"
+  },
+  "邮箱已启用": {
+    "zh-TW": "郵箱已啟用",
+    "en": "Mailbox enabled"
+  },
+  "外部邮箱已更新": {
+    "zh-TW": "外部郵箱已更新",
+    "en": "External mailbox updated"
+  },
+  "外部邮箱已添加": {
+    "zh-TW": "外部郵箱已新增",
+    "en": "External mailbox added"
+  },
+  "操作失败": {
+    "zh-TW": "操作失敗",
+    "en": "Operation failed"
+  },
+  "共享链接已创建": {
+    "zh-TW": "分享連結已建立",
+    "en": "Share link created"
+  },
+  "创建失败": {
+    "zh-TW": "建立失敗",
+    "en": "Creation failed"
+  },
+  "时间范围不合法": {
+    "zh-TW": "時間範圍無效",
+    "en": "Invalid time range"
+  },
+  "共享链接已复制": {
+    "zh-TW": "分享連結已複製",
+    "en": "Share link copied"
+  },
+  "请从下方手动复制链接": {
+    "zh-TW": "請從下方手動複製連結",
+    "en": "Copy the link below manually"
+  },
+  "重置后旧链接立即失效，确定继续吗？": {
+    "zh-TW": "重設後舊連結立即失效，確定繼續嗎？",
+    "en": "Resetting will immediately invalidate the old link. Continue?"
+  },
+  "确定撤销？该车友将立即无法继续访问。": {
+    "zh-TW": "確定撤銷？該成員將立即無法存取。",
+    "en": "Revoke access? This guest will immediately lose access."
+  },
+  "永久删除这条已撤销的记录？不会删除邮箱或邮件。": {
+    "zh-TW": "永久刪除這筆已撤銷紀錄？不會刪除郵箱或郵件。",
+    "en": "Permanently delete this revoked record? Mailboxes and messages are preserved."
+  },
+  "共享已撤销": {
+    "zh-TW": "分享已撤銷",
+    "en": "Share revoked"
+  },
+  "共享记录已删除": {
+    "zh-TW": "分享紀錄已刪除",
+    "en": "Share record deleted"
+  },
+  "为车友创建只读链接，设置有效期与可查看的邮件范围。": {
+    "zh-TW": "為成員建立唯讀連結，設定有效期限及可見郵件範圍。",
+    "en": "Create read-only guest links and control expiration and visible message history."
+  },
+  "创建共享链接": {
+    "zh-TW": "建立分享連結",
+    "en": "Create share link"
+  },
+  "每位车友使用独立链接，方便单独撤销权限。": {
+    "zh-TW": "每位成員使用獨立連結，方便個別撤銷權限。",
+    "en": "Give each guest a separate link so access can be revoked individually."
+  },
+  "选择外部邮箱": {
+    "zh-TW": "選擇外部郵箱",
+    "en": "Select a mailbox"
+  },
+  "车友备注（选填）": {
+    "zh-TW": "成員備註（選填）",
+    "en": "Guest label (optional)"
+  },
+  "例如：一号车 · 成员 A": {
+    "zh-TW": "例如：第一組 · 成員 A",
+    "en": "e.g. Group 1 · Guest A"
+  },
+  "共享链接有效期": {
+    "zh-TW": "分享連結有效期限",
+    "en": "Link expiration"
+  },
+  "自定义有效期（天）": {
+    "zh-TW": "自訂有效期（天）",
+    "en": "Custom duration (days)"
+  },
+  "历史邮件可见范围": {
+    "zh-TW": "歷史郵件可見範圍",
+    "en": "Visible message history"
+  },
+  "自定义可见范围（分钟）": {
+    "zh-TW": "自訂可見範圍（分鐘）",
+    "en": "Custom history (minutes)"
+  },
+  "生成专属链接": {
+    "zh-TW": "產生專屬連結",
+    "en": "Generate share link"
+  },
+  "先添加外部邮箱": {
+    "zh-TW": "先新增外部郵箱",
+    "en": "Add a mailbox first"
+  },
+  "共享链接已准备好": {
+    "zh-TW": "分享連結已準備好",
+    "en": "Share link is ready"
+  },
+  "已复制": {
+    "zh-TW": "已複製",
+    "en": "Copied"
+  },
+  "复制链接": {
+    "zh-TW": "複製連結",
+    "en": "Copy link"
+  },
+  "预览": {
+    "zh-TW": "預覽",
+    "en": "Preview"
+  },
+  "共享链接": {
+    "zh-TW": "分享連結",
+    "en": "Share link"
+  },
+  "如复制失败，可选中上方链接手动复制。": {
+    "zh-TW": "如複製失敗，可選取上方連結手動複製。",
+    "en": "If copying fails, select and copy the link above."
+  },
+  "已有共享": {
+    "zh-TW": "現有分享",
+    "en": "Existing shares"
+  },
+  "按邮箱筛选、复制链接或撤销访问。": {
+    "zh-TW": "按郵箱篩選、複製連結或撤銷存取權限。",
+    "en": "Filter by mailbox, copy links or revoke access."
+  },
+  "按邮箱筛选": {
+    "zh-TW": "按郵箱篩選",
+    "en": "Filter by mailbox"
+  },
+  "全部外部邮箱": {
+    "zh-TW": "所有外部郵箱",
+    "en": "All external mailboxes"
+  },
+  "正在读取...": {
+    "zh-TW": "正在讀取…",
+    "en": "Loading..."
+  },
+  "尚无共享链接": {
+    "zh-TW": "尚無分享連結",
+    "en": "No share links yet"
+  },
+  "车友：": {
+    "zh-TW": "成員：",
+    "en": "Guest: "
+  },
+  "未命名": {
+    "zh-TW": "未命名",
+    "en": "Unnamed"
+  },
+  "到期": {
+    "zh-TW": "到期",
+    "en": "Expires"
+  },
+  "永久有效": {
+    "zh-TW": "永久有效",
+    "en": "Never expires"
+  },
+  "撤销": {
+    "zh-TW": "撤銷",
+    "en": "Revoke"
+  },
+  "删除记录": {
+    "zh-TW": "刪除紀錄",
+    "en": "Delete record"
+  },
+  "重置链接": {
+    "zh-TW": "重設連結",
+    "en": "Reset link"
+  },
+  "有效": {
+    "zh-TW": "有效",
+    "en": "Active"
+  },
+  "已过期": {
+    "zh-TW": "已過期",
+    "en": "Expired"
+  },
+  "已撤销": {
+    "zh-TW": "已撤銷",
+    "en": "Revoked"
+  },
+  "全部已同步邮件": {
+    "zh-TW": "所有已同步郵件",
+    "en": "All synced messages"
+  },
+  "最近 {0} 天": {
+    "zh-TW": "最近 {0} 天",
+    "en": "Last {0} days"
+  },
+  "最近 {0} 小时": {
+    "zh-TW": "最近 {0} 小時",
+    "en": "Last {0} hours"
+  },
+  "最近 {0} 分钟": {
+    "zh-TW": "最近 {0} 分鐘",
+    "en": "Last {0} minutes"
+  },
+  "30 天": {
+    "zh-TW": "30 天",
+    "en": "30 days"
+  },
+  "7 天": {
+    "zh-TW": "7 天",
+    "en": "7 days"
+  },
+  "1 天": {
+    "zh-TW": "1 天",
+    "en": "1 day"
+  },
+  "永久有效，直到撤销": {
+    "zh-TW": "永久有效，直到撤銷",
+    "en": "Never expires (until revoked)"
+  },
+  "自定义天数": {
+    "zh-TW": "自訂天數",
+    "en": "Custom days"
+  },
+  "最近 24 小时": {
+    "zh-TW": "最近 24 小時",
+    "en": "Last 24 hours"
+  },
+  "最近 1 小时": {
+    "zh-TW": "最近 1 小時",
+    "en": "Last hour"
+  },
+  "最近 7 天": {
+    "zh-TW": "最近 7 天",
+    "en": "Last 7 days"
+  },
+  "自定义分钟数": {
+    "zh-TW": "自訂分鐘數",
+    "en": "Custom minutes"
+  },
+  "账户资料已保存": {
+    "zh-TW": "帳戶資料已儲存",
+    "en": "Profile saved"
+  },
+  "保存失败": {
+    "zh-TW": "儲存失敗",
+    "en": "Save failed"
+  },
+  "新密码至少需要 8 个字符": {
+    "zh-TW": "新密碼至少需要 8 個字元",
+    "en": "New password must contain at least 8 characters"
+  },
+  "两次输入的新密码不一致": {
+    "zh-TW": "兩次輸入的新密碼不一致",
+    "en": "New passwords do not match"
+  },
+  "密码已更新": {
+    "zh-TW": "密碼已更新",
+    "en": "Password updated"
+  },
+  "修改失败": {
+    "zh-TW": "修改失敗",
+    "en": "Update failed"
+  },
+  "管理登录账户和安全设置。": {
+    "zh-TW": "管理登入帳戶與安全設定。",
+    "en": "Manage your account and security settings."
+  },
+  "账户信息": {
+    "zh-TW": "帳戶資訊",
+    "en": "Account information"
+  },
+  "用户名": {
+    "zh-TW": "使用者名稱",
+    "en": "Username"
+  },
+  "显示名称": {
+    "zh-TW": "顯示名稱",
+    "en": "Display name"
+  },
+  "保存中...": {
+    "zh-TW": "儲存中...",
+    "en": "Saving..."
+  },
+  "保存资料": {
+    "zh-TW": "儲存資料",
+    "en": "Save profile"
+  },
+  "角色": {
+    "zh-TW": "角色",
+    "en": "Role"
+  },
+  "超级管理员": {
+    "zh-TW": "超級管理員",
+    "en": "Administrator"
+  },
+  "普通用户": {
+    "zh-TW": "一般使用者",
+    "en": "User"
+  },
+  "账号状态": {
+    "zh-TW": "帳戶狀態",
+    "en": "Account status"
+  },
+  "正常": {
+    "zh-TW": "正常",
+    "en": "Active"
+  },
+  "创建时间": {
+    "zh-TW": "建立時間",
+    "en": "Created"
+  },
+  "此账户已启用双因素认证。": {
+    "zh-TW": "此帳戶已啟用雙因素驗證。",
+    "en": "Two-factor authentication is enabled on this account."
+  },
+  "修改密码": {
+    "zh-TW": "修改密碼",
+    "en": "Change password"
+  },
+  "当前密码": {
+    "zh-TW": "目前密碼",
+    "en": "Current password"
+  },
+  "新密码": {
+    "zh-TW": "新密碼",
+    "en": "New password"
+  },
+  "确认新密码": {
+    "zh-TW": "確認新密碼",
+    "en": "Confirm new password"
+  },
+  "更新中...": {
+    "zh-TW": "更新中...",
+    "en": "Updating..."
+  },
+  "更新密码": {
+    "zh-TW": "更新密碼",
+    "en": "Update password"
+  },
+  "登录状态": {
+    "zh-TW": "登入狀態",
+    "en": "Session"
+  },
+  "退出当前浏览器的管理员登录。": {
+    "zh-TW": "登出目前瀏覽器的管理員帳戶。",
+    "en": "Sign out of the administrator account in this browser."
+  },
+  "退出登录": {
+    "zh-TW": "登出",
+    "en": "Sign out"
+  }
+}
