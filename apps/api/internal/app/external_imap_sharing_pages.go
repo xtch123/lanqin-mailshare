@@ -153,7 +153,7 @@ button.danger:hover{background:#dc2626;border-color:#dc2626}
       <div id="customVisibleWrap" class="field" hidden><label for="customVisible">自定义可见范围（分钟）</label><input id="customVisible" type="number" min="0" max="525600" step="1" placeholder="0 为全部"><small class="help">例如 30 = 最近半小时</small></div>
      </div>
     </div>
-    <div class="actions"><button id="create" type="button">生成专属链接</button><button id="refresh" type="button" class="secondary">刷新共享记录</button></div>
+    <div class="actions"><button id="create" type="button">生成专属链接</button></div>
     <p id="message" role="alert"></p>
     <div id="newLink"><b>共享链接已准备好 · 可随时从右侧再次复制</b><div id="linkText" class="link"></div>
      <div class="actions"><button id="copy" type="button">复制链接</button><a id="preview" href="#" target="_blank" rel="noopener noreferrer">预览车友页面 ↗</a></div>
