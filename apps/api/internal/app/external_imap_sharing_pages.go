@@ -111,6 +111,16 @@ button.danger:hover{background:#dc2626;border-color:#dc2626}
 #preview{color:#27272a}
 .note{background:#fafafa;border-color:#e4e4e7;color:#71717a}
 .footer{color:#a1a1aa}
+.share-filter{padding:14px 20px 4px}
+.share-filter label{margin-bottom:7px}
+.share-filter select{min-height:38px;font-size:12px}
+.share-account{display:block;font-size:12px;font-weight:700;color:#18181b;line-height:1.5}
+.share-address{display:block;font-size:11px;color:#71717a;margin-top:2px;overflow-wrap:anywhere}
+.share-label{display:block;font-size:12px;color:#27272a;margin-top:7px}
+.share-actions{display:flex;flex:0 0 auto;flex-direction:column;gap:6px;align-items:stretch}
+.share-actions button{font-size:11px;min-height:32px;padding:6px 9px;white-space:nowrap;min-width:70px}
+.share-actions button.danger{min-width:70px}
+@media(max-width:580px){.share-filter{padding:13px 17px 5px}.share-actions button{min-width:66px}}
 </style></head><body>
 <header class="topbar"><div class="top-inner">
  <div class="brand"><span class="logo" aria-hidden="true">✉</span><span>LanQin Mail</span></div>
@@ -151,7 +161,8 @@ button.danger:hover{background:#dc2626;border-color:#dc2626}
    </div>
   </section>
   <aside class="card">
-   <div class="card-head"><h2>已有共享</h2><p>每条链接独立管理，撤销后立即失效。</p></div>
+   <div class="card-head"><h2>已有共享</h2><p>按邮箱查看车友链接，支持随时复制或撤销。</p></div>
+   <div class="share-filter"><label for="shareFilter">按邮箱筛选</label><select id="shareFilter"><option value="">全部外部邮箱</option></select></div>
    <div id="shares">读取中…</div>
    <div class="note">建议每位车友单独生成链接，避免一人退出后需要更换所有人的访问凭证。</div>
   </aside>
