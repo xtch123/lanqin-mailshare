@@ -200,6 +200,7 @@ import {
 } from "@/components/ui/sidebar"
 import { MailHtmlFrame } from "@/components/mail-html-frame"
 import { MailAttachment } from "@/components/mail-attachment"
+import { LiteExternalIMAPManager } from "@/components/lite-external-imap-manager"
 import { useMe } from "@/hooks/use-me"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useToast } from "@/hooks/use-toast"
@@ -236,7 +237,7 @@ type ComposeDraft = {
   isDraft?: boolean
 }
 type MailFilter = "all" | "unread" | "starred" | "attachments"
-type MailView = "folder" | "starred" | "label" | "scheduled" | "sendQueue" | "external" | "shareManager"
+type MailView = "folder" | "starred" | "label" | "scheduled" | "sendQueue" | "external" | "shareManager" | "accountManager"
 
 const MAILSHARE_LITE = import.meta.env.VITE_MAILSHARE_LITE === "true"
 type MailListResponse = { items?: MailMessage[]; nextCursor?: string; totalCount?: number }
@@ -343,7 +344,14 @@ export function MailPage() {
   const deepLinkMessageId = urlParams.get("messageId") || ""
   const me = useMe()
   const [folder, setFolder] = React.useState("Inbox")
-  const [mailView, setMailView] = React.useState<MailView>(MAILSHARE_LITE && new URLSearchParams(window.location.search).get("view") === "shares" ? "shareManager" : "folder")
+  const [mailView, setMailView] = React.useState<MailView>(() => {
+    const view = new URLSearchParams(window.location.search).get("view")
+    return MAILSHARE_LITE && view === "shares"
+      ? "shareManager"
+      : MAILSHARE_LITE && view === "accounts"
+        ? "accountManager"
+        : "folder"
+  })
   const [selectedLabelId, setSelectedLabelId] = React.useState("")
   const [query, setQuery] = React.useState("")
   const [messagePageIndex, setMessagePageIndex] = React.useState(0)
@@ -430,6 +438,27 @@ export function MailPage() {
     setExternalFolder("INBOX")
     setMailView("external")
   }, [externalImapEnabled, externalMailAccounts.data?.items, mailView])
+
+  // Keep Lite panel selection in sync with the URL (including Back/Forward).
+  React.useEffect(() => {
+    if (!MAILSHARE_LITE) return
+    const view = urlParams.get("view")
+    if (view === "shares" || view === "accounts") {
+      const target = view === "shares" ? "shareManager" : "accountManager"
+      if (mailView !== target) setMailView(target)
+      return
+    }
+    if (mailView === "shareManager" || mailView === "accountManager") {
+      const first = externalMailAccounts.data?.items?.[0]
+      if (first) {
+        setSelectedExternalAccountId(first.id)
+        setExternalFolder("INBOX")
+        setMailView("external")
+      } else {
+        setMailView("folder")
+      }
+    }
+  }, [mailView, urlParams, externalMailAccounts.data?.items])
 
   const externalFolders = useQuery({
     queryKey: ["mail-external-folders", selectedExternalAccountId],
@@ -1389,7 +1418,9 @@ export function MailPage() {
   const viewTitle =
     mailView === "shareManager"
       ? "共享管理"
-      : mailView === "external"
+      : mailView === "accountManager"
+        ? "邮箱接入管理"
+        : mailView === "external"
       ? `${selectedExternalAccount?.name || uiText("外部邮箱")} · ${folderLabels[externalFolder] ? uiText(folderLabels[externalFolder]) : externalFolder}`
       : mailView === "sendQueue"
         ? uiText("发送队列")
@@ -1923,9 +1954,12 @@ export function MailPage() {
                 <SidebarMenuButton
                   title="邮箱接入管理"
                   className={cn(sidebarCollapsed && "justify-center px-0")}
+                  isActive={mailView === "accountManager"}
                   onClick={() => {
+                    setMailView("accountManager")
+                    setSelectedId(null)
                     setMobileSidebarOpen(false)
-                    navigate("/profile?tab=mailboxes")
+                    setURLParams({ view: "accounts" })
                   }}
                 >
                   <Settings className="h-4 w-4 shrink-0" />
@@ -2342,6 +2376,8 @@ export function MailPage() {
     }
   }
 
+  const hideLiteMailToolbar = MAILSHARE_LITE && (mailView === "shareManager" || mailView === "accountManager")
+
   const contentView = !canAccessMail ? (
     <PermissionEmptyState
       title={uiText("无邮箱前台权限")}
@@ -2353,6 +2389,22 @@ export function MailPage() {
       title={uiText("无邮件查看权限")}
       description={uiText("当前账号可以访问邮箱前台，但未开启邮件查看权限。")}
       onOpenSettings={openSettings}
+    />
+  ) : MAILSHARE_LITE && mailView === "accountManager" ? (
+    <LiteExternalIMAPManager
+      accounts={externalAccountItems}
+      loading={externalMailAccounts.isLoading}
+      mailboxId={activeMailboxId}
+      onOpenInbox={(account) => {
+        openExternalFolder(account, "INBOX")
+        setURLParams({})
+      }}
+      onOpenShares={() => {
+        setMailView("shareManager")
+        setSelectedId(null)
+        setMobileSidebarOpen(false)
+        setURLParams({ view: "shares" })
+      }}
     />
   ) : MAILSHARE_LITE && mailView === "shareManager" ? (
     <iframe
@@ -2366,7 +2418,10 @@ export function MailPage() {
       <Inbox className="h-10 w-10 text-muted-foreground" />
       <div className="text-lg font-medium">还没有外部 IMAP 邮箱</div>
       <p className="max-w-md text-sm text-muted-foreground">先接入 seek.li 邮箱，再创建车友共享链接。</p>
-      <Button onClick={() => navigate("/profile?tab=mailboxes")}>添加外部邮箱</Button>
+      <Button onClick={() => {
+        setMailView("accountManager")
+        setURLParams({ view: "accounts" })
+      }}>添加外部邮箱</Button>
     </div>
   ) : !mailboxList.isLoading && !hasMailboxes ? (
     <NoMailboxState onOpenSettings={openSettings} />
