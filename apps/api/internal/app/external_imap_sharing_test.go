@@ -179,3 +179,34 @@ func TestExternalIMAPSharePagesRespectCSP(t *testing.T) {
 		t.Fatalf("admin script exposed without authentication: %d", admin.Code)
 	}
 }
+
+func TestExternalIMAPShareMobileLayouts(t *testing.T) {
+	a := newTestApp(t)
+	viewer := httptest.NewRecorder()
+	a.handleExternalIMAPSharePage(viewer, httptest.NewRequest(http.MethodGet, "/api/public/shared-inbox", nil))
+	html := viewer.Body.String()
+	for _, required := range []string{
+		`name="viewport" content="width=device-width,initial-scale=1"`,
+		`@media(max-width:720px)`,
+		`class="mobile-back" id="backToList"`,
+		`mail-shell.detail-open`,
+	} {
+		if !strings.Contains(html, required) {
+			t.Fatalf("viewer is missing mobile requirement %q", required)
+		}
+	}
+	js := httptest.NewRecorder()
+	a.handleExternalIMAPShareViewerJS(js, httptest.NewRequest(http.MethodGet, "/api/public/shared-inbox/app.js", nil))
+	for _, required := range []string{`matchMedia`, `backToList`, `detail-open`} {
+		if !strings.Contains(js.Body.String(), required) {
+			t.Fatalf("viewer JS is missing mobile requirement %q", required)
+		}
+	}
+	admin := httptest.NewRecorder()
+	a.handleExternalIMAPShareAdminPage(admin, httptest.NewRequest(http.MethodGet, "/api/me/external-imap-share-panel", nil))
+	for _, required := range []string{`@media(max-width:580px)`, `id="customDaysWrap"`, `id="customVisibleWrap"`} {
+		if !strings.Contains(admin.Body.String(), required) {
+			t.Fatalf("share manager is missing mobile requirement %q", required)
+		}
+	}
+}
