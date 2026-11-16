@@ -144,7 +144,7 @@ $("create").onclick=async()=>{
     await loadShares()}
  catch(e){showError(e)}finally{$("create").disabled=false}
 };
-$("refresh").onclick=()=>loadShares().catch(showError);
+
 $("copy").onclick=async()=>{try{await navigator.clipboard.writeText(lastLink);$("copy").textContent="已复制"}catch(e){showError(e)}};
 loadAccounts().then(loadShares).catch(showError);`
 
